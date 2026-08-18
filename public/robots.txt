@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /cart
+Disallow: /account
+Disallow: /orders
+
+Sitemap: https://www.pratikdairy.com/sitemap.xml

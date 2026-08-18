@@ -1,0 +1,81 @@
+<div class="um">
+  <header class="um-head">
+    <div>
+      <h1>Users</h1>
+      <p>Manage registered customers and their activity</p>
+    </div>
+    <div class="um-count">
+      <span class="num">{{ filteredUsers().length }}</span>
+      <span class="lbl">Total</span>
+    </div>
+  </header>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Registered Users</h2>
+      <input
+        class="search"
+        type="search"
+        placeholder="Search name, email or username"
+        [ngModel]="query()"
+        (ngModelChange)="query.set($event)"
+      />
+    </div>
+
+    @if (isLoading()) {
+      <div class="state">
+        <div class="spinner"></div>
+        <p>Loading users…</p>
+      </div>
+    } @else if (error()) {
+      <div class="state">
+        <p class="err">{{ error() }}</p>
+        <button class="btn" (click)="loadAllUsers()">Retry</button>
+      </div>
+    } @else if (filteredUsers().length === 0) {
+      <div class="state">
+        <p>No users found</p>
+        <span class="muted">Try a different search or add users to the system.</span>
+      </div>
+    } @else {
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of filteredUsers(); track user.id) {
+              <tr>
+                <td>
+                  <div class="user">
+                    <span class="avatar">{{ getInitials(user.username) }}</span>
+                    <div>
+                      <div class="name">{{ user.username }}</div>
+                      <div class="muted">#{{ user.id }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>{{ user.firstName }} {{ user.lastName }}</td>
+                <td class="muted">{{ user.email }}</td>
+                <td>
+                  <span class="tag" [ngClass]="'tag-' + user.role.toLowerCase()">
+                    {{ user.role | lowercase }}
+                  </span>
+                </td>
+                <td class="right">
+                  <button class="btn ghost" (click)="viewHistory(user)">View history</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+</div>

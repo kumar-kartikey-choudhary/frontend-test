@@ -1,0 +1,17 @@
+{
+  "name": "Pratik Dairy & Sweets",
+  "short_name": "Pratik Dairy",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffdf8",
+  "theme_color": "#b8860b",
+  "description": "Fresh dairy, sweets, namkeen and cold drinks.",
+  "icons": [
+    {
+      "src": "assets/images/pratik-dairy-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
