@@ -1,27 +1,29 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { Router, RouterModule } from '@angular/router';
 import { CartService } from '../../service/cart/CartService';
-import type { CartItemDto } from '../../model';
+import { ToastService } from '../../core/services/toast.service';
+import { CartItemDto } from '../../model/cart.model';
 
 @Component({
   selector: 'app-shopping-cart',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterModule],
   templateUrl: './shopping-cart.html',
-  styleUrl: './shopping-cart.css',
+  styleUrls: ['./shopping-cart.css']
 })
 export class ShoppingCart implements OnInit {
   cartItems: CartItemDto[] = [];
-  isLoading = true;
-  errorMsg = '';
-  isCheckingOut = false;
+  subtotalAmount: number = 0;
+  totalAmount: number = 0;
+  totalCount: number = 0;
+  isLoading: boolean = false;
+  isCheckingOut: boolean = false;
 
   constructor(
-    public cartService: CartService,
-    private router: Router,
-    private sanitizer: DomSanitizer
+    private cartService: CartService,
+    private toastService: ToastService,
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -30,61 +32,39 @@ export class ShoppingCart implements OnInit {
 
   loadCart(): void {
     this.isLoading = true;
-    this.errorMsg = '';
     this.cartService.getCart().subscribe({
-      next: (items) => {
-        this.cartItems = items.map((item) => this.mapImageUrl(item));
+      next: (items: CartItemDto[]) => {
+        this.cartItems = items || [];
+        this.calculateTotals();
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Failed to load cart:', err);
-        this.errorMsg = 'Could not load cart. Please try again.';
+      error: () => {
+        this.toastService.error('Failed to load cart items');
         this.isLoading = false;
-      },
+      }
     });
   }
 
-  private mapImageUrl(item: CartItemDto): CartItemDto {
-    let finalImageUrl: string | SafeUrl = 'assets/images/placeholder.png';
-
-    if (item.productImageUrl) {
-      finalImageUrl = this.sanitizer.bypassSecurityTrustUrl(
-        `data:image/jpeg;base64,${item.productImageUrl}`
-      );
-    }
-
-    return { ...item, productImageUrl: finalImageUrl };
-  }
-
-  removeItem(productId: string): void {
-    this.errorMsg = '';
-    this.cartService.removeItem(productId).subscribe({
-      next: () => {
-        this.cartItems = this.cartItems.filter((item) => item.productId !== productId);
-        this.cartService.syncCartFromBackend(); // Keep header/global cart badge in sync
-      },
-      error: (err) => {
-        console.error('Remove item failed:', err);
-        this.errorMsg = 'Failed to remove item. Please try again.';
-      },
-    });
+  calculateTotals(): void {
+    this.totalCount = this.cartItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
+    this.subtotalAmount = this.cartItems.reduce((acc, item) => {
+      const lineSubtotal = item.subtotal != null ? item.subtotal : (item.pricePerUnit * item.quantity);
+      return acc + Number(lineSubtotal);
+    }, 0);
+    this.totalAmount = this.subtotalAmount;
   }
 
   increaseQuantity(item: CartItemDto): void {
-    this.errorMsg = '';
     const newQty = item.quantity + 1;
-    
     this.cartService.updateQuantity(item.productId, newQty).subscribe({
-      next: (updated: CartItemDto) => {
-        item.quantity = updated.quantity;
-        item.pricePerUnit = updated.pricePerUnit;
-        item.subtotal = updated.subtotal;
-        this.cartService.syncCartFromBackend();
+      next: (updatedDto: any) => {
+        item.quantity = newQty;
+        item.subtotal = updatedDto?.subtotal ?? (item.pricePerUnit * newQty);
+        this.calculateTotals();
       },
       error: (err) => {
-        console.error('Quantity increase failed:', err);
-        this.errorMsg = 'Insufficient stock available.';
-      },
+        this.toastService.error(err?.error?.message || 'Failed to update quantity');
+      }
     });
   }
 
@@ -93,31 +73,37 @@ export class ShoppingCart implements OnInit {
       this.removeItem(item.productId);
       return;
     }
-
-    this.errorMsg = '';
     const newQty = item.quantity - 1;
-
     this.cartService.updateQuantity(item.productId, newQty).subscribe({
-      next: (updated: CartItemDto) => {
-        item.quantity = updated.quantity;
-        item.pricePerUnit = updated.pricePerUnit;
-        item.subtotal = updated.subtotal;
-        this.cartService.syncCartFromBackend();
+      next: (updatedDto: any) => {
+        item.quantity = newQty;
+        item.subtotal = updatedDto?.subtotal ?? (item.pricePerUnit * newQty);
+        this.calculateTotals();
       },
       error: (err) => {
-        console.error('Quantity decrease failed:', err);
-        this.errorMsg = 'Could not update quantity.';
-      },
+        this.toastService.error(err?.error?.message || 'Failed to update quantity');
+      }
     });
   }
 
+  removeItem(productId: string): void {
+    this.cartService.removeItem(productId).subscribe({
+      next: () => {
+        this.cartItems = this.cartItems.filter(item => item.productId !== productId);
+        this.calculateTotals();
+        this.toastService.success('Item removed from cart');
+      },
+      error: () => {
+        this.toastService.error('Failed to remove item');
+      }
+    });
+  }
   checkout(): void {
     if (this.cartItems.length === 0) {
-      this.errorMsg = 'Your cart is empty. Add items before checking out.';
+      this.toastService.error('Your cart is empty. Add items before checking out.');
       return;
     }
 
-    this.errorMsg = '';
     this.isCheckingOut = true;
 
     this.cartService.checkout().subscribe({
@@ -125,29 +111,14 @@ export class ShoppingCart implements OnInit {
         this.cartItems = [];
         this.isCheckingOut = false;
         this.cartService.syncCartFromBackend();
+        this.toastService.success('Order placed successfully!');
         this.router.navigate(['/orders']);
       },
       error: (err) => {
         console.error('Checkout failed:', err);
-        this.errorMsg = 'Failed to place order. Some items may be out of stock.';
+        this.toastService.error('Failed to place order. Some items may be out of stock.');
         this.isCheckingOut = false;
       },
     });
-  }
-
-  get totalAmount(): number {
-    return this.cartItems.reduce((sum, item) => sum + item.subtotal, 0);
-  }
-
-  get totalItems(): number {
-    return this.cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  }
-
-  getWeight(item: CartItemDto): string {
-    return item.weight || '1kg';
-  }
-
-  getUnitPrice(item: CartItemDto): number {
-    return item.pricePerUnit;
   }
 }
