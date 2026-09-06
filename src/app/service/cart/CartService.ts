@@ -14,8 +14,9 @@ export class CartService {
   private cartUrl = `${environment.apiBaseUrl}/carts`;
   private orderUrl = `${environment.apiBaseUrl}/orders`;
 
-  // Global cart quantity state, keyed by productId. There's no weight-variant dimension
-  // anymore - a product IS its own unit, so one cart line per product per user.
+  // Global cart quantity state, keyed by productId. The weight variant is chosen once,
+  // at add-to-cart time (see addToCart below), and the backend remembers it against the
+  // cart line - quantity +/- afterwards doesn't change which weight was selected.
   private cartStateSubject = new BehaviorSubject<{ [productId: string]: number }>({});
   cartState$ = this.cartStateSubject.asObservable();
 
@@ -67,12 +68,17 @@ export class CartService {
 
   // ---------- Global cart actions (used directly by components) ----------
 
-  /** Add to cart - login check + API call + state update, all in one place */
-  addToCart(productId: string, quantity: number = 1): void {
+  /**
+   * Add to cart - login check + API call + state update, all in one place.
+   * `weight` is the selected weight variant (e.g. "250g", "500g", "1kg"); the backend
+   * uses it to (re)calculate pricePerUnit against the product's base price/unit - see
+   * WeightPricing.priceFor() in cart-service.
+   */
+  addToCart(productId: string, weight: string, quantity: number = 1): void {
     if (!this.requireLogin()) return;
 
     this.setLoading(productId, true);
-    this.addItemToCart(productId, quantity).subscribe({
+    this.addItemToCart(productId, weight, quantity).subscribe({
       next: () => {
         this.setCartQty(productId, quantity);
         this.setLoading(productId, false);
@@ -129,8 +135,8 @@ export class CartService {
     return this.http.get<CartItemDto[]>(this.cartUrl);
   }
 
-  addItemToCart(productId: string, quantity: number): Observable<CartItemDto> {
-    const payload: AddToCart = { productId, quantity };
+  addItemToCart(productId: string, weight: string, quantity: number): Observable<CartItemDto> {
+    const payload: AddToCart = { productId, quantity, weight };
     return this.http.post<CartItemDto>(`${this.cartUrl}/items`, payload);
   }
 

@@ -50,4 +50,19 @@ export class MyOrders implements OnInit {
   itemImageUrl(imageId: string | undefined): string {
     return imageId ? this.productService.imageUrl(imageId) : 'assets/images/placeholder.png';
   }
+
+  getItemWeightDisplay(item: any): string {
+  // 1. If weight exists as an unmapped dynamic key on item
+  if (item['weight']) return `${item['weight']} - ${item.quantity} qty`;
+  if (item['unit']) return `${item['unit']} - ${item.quantity} qty`;
+
+  // 2. Extract weight patterns directly from item.productName (e.g., "500g", "1kg", "250gm")
+  const weightMatch = item.productName?.match(/\b(\d+\s*(?:gm|g|kg|ml|l|pack))\b/i);
+  if (weightMatch) {
+    return `${weightMatch[0]} - ${item.quantity} qty`;
+  }
+
+  // 3. Default fallback if no weight pattern is found
+  return `${item.quantity} qty`;
+}
 }

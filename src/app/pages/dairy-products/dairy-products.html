@@ -41,7 +41,7 @@
                 <button
                   class="btn-add-to-cart"
                   [disabled]="cartService.isLoading(product.id)"
-                  (click)="cartService.addToCart(product.id)"
+                  (click)="addToCart(product)"
                 >
                   {{ cartService.isLoading(product.id) ? 'Adding...' : '🛒 Add to Cart' }}
                 </button>

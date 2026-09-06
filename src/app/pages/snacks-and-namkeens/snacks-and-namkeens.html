@@ -41,16 +41,29 @@
           <div class="card-details">
             <div class="name-price">
               <h3>{{ snack.productName }}</h3>
-              <span class="price-tag">₹{{ snack.price }} / {{ snack.stockUnit }}</span>
+              <span class="price-tag">₹{{ priceFor(snack) }} / {{ getSelectedWeight(snack) }}</span>
             </div>
 
             <p class="description">{{ snack.description }}</p>
+
+            <div class="weight-options">
+              @for (weight of weightOptions; track weight) {
+                <button
+                  type="button"
+                  class="weight-pill"
+                  [class.active]="getSelectedWeight(snack) === weight"
+                  (click)="selectWeight(snack, weight)"
+                >
+                  {{ weight }}
+                </button>
+              }
+            </div>
 
             @if (!cartService.isInCart(snack.id)) {
               <button
                 class="btn-order"
                 [disabled]="cartService.isLoading(snack.id)"
-                (click)="cartService.addToCart(snack.id)"
+                (click)="addToCart(snack)"
               >
                 {{ cartService.isLoading(snack.id) ? 'Adding...' : 'Add to Cart' }}
               </button>

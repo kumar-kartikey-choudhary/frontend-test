@@ -5,6 +5,11 @@ import { FormsModule } from '@angular/forms';
 import { ProductService } from '../../service/product/product-service';
 import { CartService } from '../../service/cart/CartService';
 import type { Product } from '../../model';
+import {
+  SELECTABLE_WEIGHTS,
+  defaultWeightFor,
+  priceForWeight,
+} from '../../shared/uti/weight-pricing.util';
 
 @Component({
   selector: 'app-cold-drinks',
@@ -17,6 +22,10 @@ export class ColdDrinks implements OnInit {
   filterText = '';
   products: Product[] = [];
   isLoading = false;
+
+  readonly weightOptions = SELECTABLE_WEIGHTS;
+  /** Selected weight variant per productId - defaults to the product's own unit. */
+  private selectedWeights: { [productId: string]: string } = {};
 
   constructor(
     private productService: ProductService,
@@ -53,5 +62,23 @@ export class ColdDrinks implements OnInit {
     const filter = this.filterText.toLowerCase().trim();
     if (!filter) return this.products;
     return this.products.filter((p) => p.productName.toLowerCase().includes(filter));
+  }
+
+  /** Currently selected weight for this product's card (defaults to its own stockUnit). */
+  getSelectedWeight(product: Product): string {
+    return this.selectedWeights[product.id] ?? defaultWeightFor(product.stockUnit);
+  }
+
+  selectWeight(product: Product, weight: string): void {
+    this.selectedWeights = { ...this.selectedWeights, [product.id]: weight };
+  }
+
+  /** Price for this product at the currently selected weight - mirrors WeightPricing.priceFor() on the backend. */
+  priceFor(product: Product): number {
+    return priceForWeight(product.price, this.getSelectedWeight(product), product.stockUnit);
+  }
+
+  addToCart(product: Product): void {
+    this.cartService.addToCart(product.id, this.getSelectedWeight(product));
   }
 }

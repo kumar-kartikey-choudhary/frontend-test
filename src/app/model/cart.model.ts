@@ -8,7 +8,7 @@ export interface CartItemDto {
   productImageId?: string;
   /** The product's own stockUnit (e.g. "kg", "pcs") - display only, e.g. "2.5 kg". */
   unit: string;
-  /** In the product's own stockUnit multiples. No more weight-variant to pick - the product itself defines the unit. */
+  weight: string;
   quantity: number;
   pricePerUnit: number;
   subtotal: number;
@@ -18,4 +18,5 @@ export interface CartItemDto {
 export interface AddToCart {
   productId: string;
   quantity: number;
+   weight: string;
 }

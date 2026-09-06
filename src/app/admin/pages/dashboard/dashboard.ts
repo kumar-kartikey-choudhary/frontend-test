@@ -2,7 +2,7 @@
 
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DecimalPipe } from '@angular/common';
+import { CommonModule, SlicePipe, DecimalPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { AdminService } from '../../service/admin-service';
 import { OrderAdminService, OrderResponse } from '../../service/order-admin-service';
@@ -38,7 +38,7 @@ const LOW_STOCK_THRESHOLD = 10;
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
   standalone: true,
-  imports: [RouterLink, DecimalPipe],
+  imports: [RouterLink, DecimalPipe,SlicePipe],
 })
 export class AdminDashboardComponent implements OnInit {
   kpis: Kpi[] = [];
