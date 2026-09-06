@@ -7,15 +7,12 @@
     <div class="cart-items-section">
       <div class="cart-item-card" *ngFor="let item of cartItems">
         <div class="item-image">
-          <img 
-            [src]="item.productImageUrl ? 'data:image/jpeg;base64,' + item.productImageUrl : 'assets/images/placeholder.png'" 
-            [alt]="item.productName" 
-          />
+          <img [src]="imageUrlFor(item)" [alt]="item.productName" />
         </div>
 
         <div class="item-details">
           <h3 class="product-name">{{ item.productName }}</h3>
-          <span class="weight-badge">{{ item.weight }}</span>
+          <span class="unit-badge">{{ item.quantity }} {{ item.unit }}</span>
         </div>
 
         <div class="quantity-controls">
@@ -37,10 +34,41 @@
     </div>
 
     <div class="cart-summary-card">
+      <div class="coupon-box">
+        @if (!appliedCoupon) {
+          <div class="coupon-input-row">
+            <input
+              type="text"
+              placeholder="Coupon code"
+              [(ngModel)]="couponCodeInput"
+              (keyup.enter)="applyCoupon()"
+              class="coupon-input"
+            />
+            <button class="btn-apply-coupon" (click)="applyCoupon()" [disabled]="isApplyingCoupon || !couponCodeInput">
+              {{ isApplyingCoupon ? 'Checking...' : 'Apply' }}
+            </button>
+          </div>
+          @if (couponError) {
+            <p class="coupon-error">{{ couponError }}</p>
+          }
+        } @else {
+          <div class="coupon-applied-row">
+            <span class="coupon-applied-label">✓ '{{ appliedCoupon.code }}' applied</span>
+            <button class="btn-remove-coupon" (click)="removeCoupon()">Remove</button>
+          </div>
+        }
+      </div>
+
       <div class="summary-line">
         <span>Subtotal ({{ totalCount }} items)</span>
-        <span>₹{{ subtotalAmount }}</span>
+        <span>₹{{ subtotalAmount | number: '1.2-2' }}</span>
       </div>
+      @if (discountAmount > 0) {
+        <div class="summary-line discount-line">
+          <span>Discount</span>
+          <span>-₹{{ discountAmount | number: '1.2-2' }}</span>
+        </div>
+      }
       <div class="summary-line">
         <span>Delivery</span>
         <span class="free-text">FREE</span>
@@ -48,10 +76,12 @@
       <div class="divider"></div>
       <div class="summary-line total-line">
         <strong>Total</strong>
-        <strong>₹{{ totalAmount }}</strong>
+        <strong>₹{{ totalAmount | number: '1.2-2' }}</strong>
       </div>
 
-      <button class="checkout-btn" (click)="checkout()">Checkout</button>
+      <button class="checkout-btn" (click)="proceedToPayment()">
+        Proceed to Payment
+      </button>
     </div>
   </div>
 

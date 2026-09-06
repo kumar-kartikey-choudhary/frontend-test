@@ -91,6 +91,19 @@
       </div>
 
       <div class="form-row">
+        <div class="input-group full-width">
+          <label for="phoneNumber">Phone Number</label>
+          <input
+            type="tel"
+            id="phoneNumber"
+            name="phoneNumber"
+            [(ngModel)]="user.phoneNumber"
+            placeholder="For delivery updates"
+          />
+        </div>
+      </div>
+
+      <div class="form-row">
         <div class="input-group">
           <label for="password">Password</label>
           <input

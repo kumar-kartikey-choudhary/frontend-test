@@ -82,7 +82,10 @@ export class OrderManagement implements OnInit {
 
   updateStatus(orderId: string, newStatus: string): void {
     const status = newStatus as OrderStatus;
-    this.orderAdminService.updateStatus(orderId, status).subscribe({
+    // Optional - lets the admin note *why* a status changed, recorded in ORDER_STATUS_HISTORY.
+    const remarks = window.prompt('Add a note for this status change (optional):') || undefined;
+
+    this.orderAdminService.updateStatus(orderId, status, remarks).subscribe({
       next: (updated) => {
         const idx = this.allOrders.findIndex((o) => o.id === orderId);
         if (idx !== -1) {

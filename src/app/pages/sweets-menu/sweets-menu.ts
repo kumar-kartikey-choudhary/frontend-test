@@ -1,48 +1,41 @@
-// // src/app/pages/sweets-menu/sweets-menu.component.ts
-
-// src/app/pages/sweets-menu/sweets-menu.component.ts
-// src/app/pages/sweets-menu/sweets-menu.component.ts (FINALIZED)
-
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NgFor } from '@angular/common';
 import { ProductService } from '../../service/product/product-service';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { CartService } from '../../service/cart/CartService';
-
-// Interface for the component's display logic
-interface SweetProduct {
-  id: string;
-  name: string;
-  category: string;
-  type: string;
-  stockUnit: string;
-  description: string;
-  price: number;
-  imageUrl: string | SafeUrl;
-}
+import type { Product } from '../../model';
 
 interface SweetCategory {
   name: string;
-  items: SweetProduct[];
+  items: Product[];
 }
+
+const TYPE_DISPLAY_NAMES: Record<string, string> = {
+  Kaju: 'Kaju Delights',
+  Barfee: 'Barfee & Milk Cakes',
+  Peda: 'Peda & Milk Sweets',
+  Laddoo: 'Laddoo Collection',
+  Chenna: 'Chenna Sweets',
+  Dry_Fruit: 'Dry Fruit & Healthy',
+  Gulab_Jamun: 'Gulab Jamun & Hot Sweets',
+  Jalebi: 'Jalebi',
+};
 
 @Component({
   selector: 'app-sweets-menu',
   templateUrl: './sweets-menu.html',
   styleUrls: ['./sweets-menu.css'],
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule],
 })
 export class SweetsMenu implements OnInit {
-  filterText: string = '';
-  allSweets: SweetProduct[] = [];
-  isLoading: boolean = false;
+  filterText = '';
+  allSweets: Product[] = [];
+  isLoading = false;
 
   constructor(
     private productService: ProductService,
-    private sanitizer: DomSanitizer,
     public cartService: CartService,
   ) {}
 
@@ -51,45 +44,12 @@ export class SweetsMenu implements OnInit {
     this.cartService.syncCartFromBackend();
   }
 
-  // --- Core Mapper Function (Safely extracts data) ---
-  /** Converts API Product shape to local SweetProduct shape. */
-  private mapApiProduct(p: any): SweetProduct {
-    // CRITICAL FIX: Accessing the field 'p.type' directly from the API response
-    const sweetType = (p.type || 'General').toLowerCase();
-    let finalImageUrl: string | SafeUrl = 'assets/images/placeholder.png'; // Initialize with fallback
-
-    // NEW LOGIC: Use Base64 data if available
-    if (p.imageData && p.imageType) {
-      // 1. Construct the raw Data URL string
-      const dataUrl = `data:${p.imageType};base64,${p.imageData}`;
-
-      // 2. **FIX 2: Use DomSanitizer to mark the Data URL as safe**
-      finalImageUrl = this.sanitizer.bypassSecurityTrustUrl(dataUrl);
-    }
-    return {
-      id: p.id,
-      name: p.productName || 'N/A',
-      category: p.category || 'N/A',
-      type: sweetType,
-      stockUnit: p.stockUnit, // Use the extracted type field for grouping
-      description: p.description || '',
-      price: p.price || 0,
-      imageUrl: finalImageUrl || '',
-    } as SweetProduct;
-  }
-
-  // --- Data Loading ---
   loadSweets(): void {
     this.isLoading = true;
-
-    this.productService.getAllProducts().subscribe({
-      next: (data: any[]) => {
-        // 1. FILTER: Keep only items where primary category is 'sweets'.
-        const filteredApiData = data.filter((p) => p.category?.toLowerCase() === 'sweets');
-
-        // 2. MAP: Transform filtered data using the mapper function
-        this.allSweets = filteredApiData.map((p) => this.mapApiProduct(p));
-
+    // 'Sweets' matches the backend Category enum (product-api / enums/Category.java).
+    this.productService.getProductsByCategory('Sweets').subscribe({
+      next: (data) => {
+        this.allSweets = data;
         this.isLoading = false;
       },
       error: (err) => {
@@ -99,40 +59,28 @@ export class SweetsMenu implements OnInit {
     });
   }
 
-  // --- Grouping Logic (Fixed to use cleaned type) ---
+  /** Build an <img src> from the product's primary image id - falls back to a placeholder. */
+  imageUrlFor(product: Product): string {
+    const primary = product.images?.find((i) => i.primary) ?? product.images?.[0];
+    return primary ? this.productService.imageUrl(primary.id) : 'assets/images/placeholder.png';
+  }
+
   get groupedByType(): SweetCategory[] {
-    const grouped: { [key: string]: SweetProduct[] } = {};
-    const typeDisplayNameMap: { [key: string]: string } = {
-      kaju: 'Kaju Delights',
-      barfee: 'Barfee & Milk Cakes',
-      peda: 'Peda & Milk Sweets',
-      laddoo: 'Laddoo Collection',
-      chhena: 'Chhena Sweets',
-      dryfruit: 'Dry Fruit & Healthy',
-      gulabjamun: 'Gulab Jamun & Hot Sweets',
-      general: 'Other Specialties',
-    };
+    const grouped: Record<string, Product[]> = {};
 
-    this.allSweets.forEach((sweet) => {
-      // Grouping based on the cleaned type field
-      const typeKey = sweet.type;
+    for (const sweet of this.allSweets) {
+      const typeKey = sweet.type || 'Other';
+      (grouped[typeKey] ??= []).push(sweet);
+    }
 
-      if (!grouped[typeKey]) {
-        grouped[typeKey] = [];
-      }
-      grouped[typeKey].push(sweet);
-    });
-
-    // Convert map to array structure
     return Object.keys(grouped)
       .map((key) => ({
-        name: typeDisplayNameMap[key] || `${key.charAt(0).toUpperCase() + key.slice(1)} Collection`,
-        items: grouped[key].sort((a, b) => a.name.localeCompare(b.name)),
+        name: TYPE_DISPLAY_NAMES[key] || `${key.replace('_', ' ')} Collection`,
+        items: grouped[key].sort((a, b) => a.productName.localeCompare(b.productName)),
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  // --- Filtering Logic (Search across Name and Type) ---
   get filteredCategories(): SweetCategory[] {
     const filter = this.filterText.toLowerCase().trim();
     const groupedMenu = this.groupedByType;
@@ -142,9 +90,7 @@ export class SweetsMenu implements OnInit {
     return groupedMenu
       .map((category) => ({
         ...category,
-        items: category.items.filter(
-          (s) => s.name.toLowerCase().includes(filter) || s.type.toLowerCase().includes(filter),
-        ),
+        items: category.items.filter((s) => s.productName.toLowerCase().includes(filter)),
       }))
       .filter((category) => category.items.length > 0);
   }

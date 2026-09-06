@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, shareReplay, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import type { Product } from '../../model';
+import type { InventoryLedgerEntry, InventoryReason, Product } from '../../model';
 
 export type { Product };
 
@@ -14,10 +14,11 @@ export class ProductService {
   /** Cached catalogue so navigating between category pages doesn't refetch. */
   private catalogue$?: Observable<Product[]>;
 
-  addProduct(productData: Product, imageFile: File): Observable<Product> {
-    const formData = this.toFormData(productData, imageFile);
+  // --- Products ---
+
+  addProduct(productData: Partial<Product>): Observable<Product> {
     return this.http
-      .post<Product>(`${this.apiUrl}/addProduct`, formData)
+      .post<Product>(`${this.apiUrl}/addProduct`, productData)
       .pipe(tap(() => this.invalidateCache()));
   }
 
@@ -31,18 +32,22 @@ export class ProductService {
     return this.catalogue$;
   }
 
-  getProductsByCategory(category: string): Observable<Product[]> {
-    return this.http.get<Product[]>(`${this.apiUrl}/all`, { params: { category } });
+  getProduct(id: string): Observable<Product> {
+    return this.http.get<Product>(`${this.apiUrl}/product/${id}`);
   }
 
-  updateProduct(
-    productId: string,
-    productData: Partial<Product>,
-    imageFile?: File | null,
-  ): Observable<Product> {
-    const url = `${this.apiUrl}/admin/updateProduct/${productId}`;
-    const body = imageFile ? this.toFormData(productData, imageFile) : productData;
-    return this.http.patch<Product>(url, body).pipe(tap(() => this.invalidateCache()));
+  getProductsByCategory(category: string): Observable<Product[]> {
+    return this.http.get<Product[]>(`${this.apiUrl}/category/${category}`);
+  }
+
+  searchProducts(name: string): Observable<Product[]> {
+    return this.http.get<Product[]>(`${this.apiUrl}/search`, { params: { name } });
+  }
+
+  updateProduct(productId: string, productData: Partial<Product>): Observable<Product> {
+    return this.http
+      .patch<Product>(`${this.apiUrl}/admin/updateProduct/${productId}`, productData)
+      .pipe(tap(() => this.invalidateCache()));
   }
 
   deleteProduct(productId: string): Observable<void> {
@@ -55,11 +60,38 @@ export class ProductService {
     this.catalogue$ = undefined;
   }
 
-  private toFormData(productData: Partial<Product>, imageFile: File): FormData {
+  // --- Images (a product can now have several; call once per photo) ---
+
+  addImage(productId: string, imageFile: File, primary = false): Observable<Product> {
     const formData = new FormData();
-    const dtoBlob = new Blob([JSON.stringify(productData)], { type: 'application/json' });
-    formData.append('productDto', dtoBlob, 'productDto.json');
     formData.append('imageFile', imageFile, imageFile.name);
-    return formData;
+    return this.http
+      .post<Product>(`${this.apiUrl}/admin/${productId}/images`, formData, { params: { primary } })
+      .pipe(tap(() => this.invalidateCache()));
+  }
+
+  /** URL for an `<img [src]>` binding - not an HttpClient call, the browser fetches it directly. */
+  imageUrl(imageId: string): string {
+    return `${this.apiUrl}/images/${imageId}`;
+  }
+
+  deleteImage(imageId: string): Observable<void> {
+    return this.http
+      .delete<void>(`${this.apiUrl}/admin/images/${imageId}`)
+      .pipe(tap(() => this.invalidateCache()));
+  }
+
+  // --- Stock / inventory ledger (admin) ---
+
+  adjustStock(productId: string, changeQty: number, reason: InventoryReason): Observable<InventoryLedgerEntry> {
+    return this.http
+      .post<InventoryLedgerEntry>(`${this.apiUrl}/admin/${productId}/adjust-stock`, null, {
+        params: { changeQty, reason },
+      })
+      .pipe(tap(() => this.invalidateCache()));
+  }
+
+  getLedger(productId: string): Observable<InventoryLedgerEntry[]> {
+    return this.http.get<InventoryLedgerEntry[]>(`${this.apiUrl}/admin/${productId}/ledger`);
   }
 }

@@ -1,0 +1,77 @@
+<div class="payment-container">
+  <div class="payment-header">
+    <button class="back-btn" (click)="backToCart()">&larr; Back to Cart</button>
+    <h2>Choose Payment Method</h2>
+  </div>
+
+  <div *ngIf="isLoading" class="loading-state">Loading...</div>
+
+  <div class="payment-content" *ngIf="!isLoading && cartItems.length > 0">
+    <div class="order-summary-section">
+      <h3>Order Summary</h3>
+      <div class="summary-item-row" *ngFor="let item of cartItems">
+        <img [src]="imageUrlFor(item)" [alt]="item.productName" class="summary-item-image" />
+        <div class="summary-item-details">
+          <span class="summary-item-name">{{ item.productName }}</span>
+          <span class="summary-item-qty">{{ item.quantity }} {{ item.unit }}</span>
+        </div>
+        <span class="summary-item-price">
+          ₹{{ item.subtotal != null ? item.subtotal : (item.pricePerUnit * item.quantity) }}
+        </span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="summary-line">
+        <span>Subtotal ({{ totalCount }} items)</span>
+        <span>₹{{ subtotalAmount | number: '1.2-2' }}</span>
+      </div>
+      @if (appliedCoupon && discountAmount > 0) {
+        <div class="summary-line discount-line">
+          <span>Discount ('{{ appliedCoupon.code }}')</span>
+          <span>-₹{{ discountAmount | number: '1.2-2' }}</span>
+        </div>
+      }
+      <div class="summary-line">
+        <span>Delivery</span>
+        <span class="free-text">FREE</span>
+      </div>
+      <div class="divider"></div>
+      <div class="summary-line total-line">
+        <strong>Total</strong>
+        <strong>₹{{ totalAmount | number: '1.2-2' }}</strong>
+      </div>
+    </div>
+
+    <div class="payment-method-section">
+      <h3>Pay with</h3>
+
+      <label class="payment-method-option">
+        <input type="radio" name="paymentMethod" value="UPI" [(ngModel)]="selectedPaymentMethod" />
+        <span class="option-icon">📱</span>
+        <span class="option-label">UPI</span>
+      </label>
+      <label class="payment-method-option">
+        <input type="radio" name="paymentMethod" value="CARD" [(ngModel)]="selectedPaymentMethod" />
+        <span class="option-icon">💳</span>
+        <span class="option-label">Credit / Debit Card</span>
+      </label>
+      <label class="payment-method-option">
+        <input type="radio" name="paymentMethod" value="COD" [(ngModel)]="selectedPaymentMethod" />
+        <span class="option-icon">💵</span>
+        <span class="option-label">Cash on Delivery</span>
+      </label>
+
+      @if (selectedPaymentMethod === 'CARD') {
+        <label class="save-card-option">
+          <input type="checkbox" [(ngModel)]="saveCard" />
+          Save this card for faster checkout next time
+        </label>
+      }
+
+      <button class="place-order-btn" (click)="placeOrder()" [disabled]="isPlacingOrder">
+        {{ isPlacingOrder ? 'Placing order...' : 'Place Order' }}
+      </button>
+    </div>
+  </div>
+</div>

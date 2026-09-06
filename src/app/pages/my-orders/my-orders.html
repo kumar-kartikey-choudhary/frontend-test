@@ -20,6 +20,13 @@
               <p class="order-total">
                 Total:
                 <span class="total-value">₹ {{ order.totalAmount | number: '1.2-2' }}</span>
+                @if (order.discountAmount > 0) {
+                  <span class="order-discount-note">
+                    (₹{{ order.subtotalAmount | number: '1.2-2' }} - ₹{{ order.discountAmount | number: '1.2-2' }}
+                    @if (order.couponCode) { via {{ order.couponCode }} }
+                    )
+                  </span>
+                }
               </p>
             </div>
 
@@ -38,20 +45,32 @@
               @for (item of order.items; track item.id) {
                 <li class="item-row">
                   <img
-                    [src]="item.imageData"
+                    [src]="itemImageUrl(item.productImageId)"
                     [alt]="item.productName"
                     class="item-thumb"
                     style="width: 48px; height: 48px; min-width: 48px; max-width: 48px; object-fit: cover; border-radius: 6px;"
                   />
                   <span class="item-name">{{ item.productName }}</span>
-                  @if (item.weight) {
-                    <span class="item-weight">{{ item.weight }}</span>
-                  }
                   <span class="item-qty">Qty: {{ item.quantity }}</span>
                   <span class="item-subtotal">₹ {{ item.subTotal | number: '1.2-2' }}</span>
                 </li>
               }
             </ul>
+
+            @if (order.statusHistory.length > 0) {
+              <p class="details-heading">Status Timeline:</p>
+              <ul class="status-timeline">
+                @for (entry of order.statusHistory; track entry.id) {
+                  <li class="timeline-row">
+                    <span [class]="'status-badge status-' + entry.status.toLowerCase()">{{ entry.status }}</span>
+                    <span class="timeline-date">{{ entry.createdAt | date: 'short' }}</span>
+                    @if (entry.remarks) {
+                      <span class="timeline-remarks">{{ entry.remarks }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
           </div>
         </div>
       }

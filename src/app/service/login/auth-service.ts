@@ -4,14 +4,14 @@ import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { StorageService } from '../../core/services/storage.service';
-import type { LoginRequest, JwtResponse, AuthState } from '../../model';
+import type { LoginRequest, JwtResponse, AuthState, RefreshTokenResponse } from '../../model';
 
 export type { LoginRequest, JwtResponse, AuthState };
 
 const TOKEN_KEY = 'AUTH_TOKEN';
+const REFRESH_TOKEN_KEY = 'REFRESH_TOKEN';
 const USER_ROLE_KEY = 'USER_ROLE';
 const USERNAME_KEY = 'USERNAME';
-const USER_ID_KEY = 'USER_ID';
 
 /** Decodes the payload of a JWT without verifying it (verification is the API's job). */
 function decodeJwt(token: string): Record<string, unknown> | null {
@@ -64,14 +64,19 @@ export class AuthService {
   private restoreSession(): void {
     const token = this.storage.get(TOKEN_KEY);
     if (!token || this.isTokenExpired(token)) {
-      this.clearStorage();
+      // Don't clear the refresh token here - a still-valid refresh token lets
+      // the interceptor silently mint a new access token on the next request
+      // instead of forcing a full re-login. Only clearStorage() (explicit
+      // logout, or a failed refresh) removes it.
+      this.storage.remove(TOKEN_KEY);
+      this.storage.remove(USER_ROLE_KEY);
+      this.storage.remove(USERNAME_KEY);
       return;
     }
     this._state.set({
       token,
       username: this.storage.get(USERNAME_KEY) ?? '',
       role: this.storage.get(USER_ROLE_KEY) ?? '',
-      id: Number(this.storage.get(USER_ID_KEY)) || null,
     });
   }
 
@@ -94,25 +99,57 @@ export class AuthService {
 
   private saveAuthData(response: JwtResponse): void {
     this.storage.set(TOKEN_KEY, response.token);
+    this.storage.set(REFRESH_TOKEN_KEY, response.refreshToken);
     this.storage.set(USER_ROLE_KEY, response.role);
     this.storage.set(USERNAME_KEY, response.username);
-    this.storage.set(USER_ID_KEY, String(response.id ?? ''));
     this._state.set({
       token: response.token,
       username: response.username,
       role: response.role,
-      id: response.id ?? null,
     });
   }
 
+  /**
+   * Exchanges the stored refresh token for a new access token, rotating the
+   * refresh token in the process (the backend revokes the old one - see
+   * UserServiceImpl.refreshAccessToken()). Called by the auth interceptor on
+   * a 401, not normally something components call directly.
+   */
+  refreshToken(): Observable<RefreshTokenResponse> {
+    const refreshToken = this.storage.get(REFRESH_TOKEN_KEY);
+    return this.http
+      .post<RefreshTokenResponse>(`${this.authApiUrl}/refresh-token`, { refreshToken })
+      .pipe(
+        tap((response) => {
+          this.storage.set(TOKEN_KEY, response.token);
+          this.storage.set(REFRESH_TOKEN_KEY, response.refreshToken);
+          this._state.set({
+            token: response.token,
+            username: response.username,
+            role: response.role,
+          });
+        }),
+      );
+  }
+
+  hasRefreshToken(): boolean {
+    return !!this.storage.get(REFRESH_TOKEN_KEY);
+  }
+
   logout(redirect = false): void {
+    const refreshToken = this.storage.get(REFRESH_TOKEN_KEY);
+    if (refreshToken) {
+      // Best-effort - revokes the session server-side so the refresh token can't be reused,
+      // but logout proceeds locally either way (e.g. if the network call fails).
+      this.http.post(`${this.authApiUrl}/logout`, { refreshToken }).subscribe({ error: () => {} });
+    }
     this.clearStorage();
     this._state.set(null);
     if (redirect) this.router.navigate(['/login']);
   }
 
   private clearStorage(): void {
-    [TOKEN_KEY, USER_ROLE_KEY, USERNAME_KEY, USER_ID_KEY].forEach((k) => this.storage.remove(k));
+    [TOKEN_KEY, REFRESH_TOKEN_KEY, USER_ROLE_KEY, USERNAME_KEY].forEach((k) => this.storage.remove(k));
   }
 
   /**

@@ -47,11 +47,9 @@
                 <td class="product-name">{{ product.productName }}</td>
                 <td>{{ product.category }}</td>
                 <td>₹ {{ product.price | number: '1.2-2' }}</td>
-                <!-- FIX: changed < 10 to <= 10 so exactly 10 units also triggers danger highlight -->
                 <td [class.stock-danger]="product.stockQuantity <= 10">
                   {{ product.stockQuantity }} {{ product.stockUnit }}
                 </td>
-                <!-- FIX: replaceAll used instead of replace to handle multi-word statuses correctly -->
                 <td>
                   <span [class]="'status-' + product.status.toLowerCase().replaceAll(' ', '-')">{{
                     product.status
@@ -87,7 +85,7 @@
             </div>
 
             <div class="input-group">
-              <label>Main Category</label>
+              <label>Category</label>
               <select [(ngModel)]="currentProduct.category" name="category" required>
                 @for (cat of categories.slice(1); track cat) {
                   <option [value]="cat">{{ cat }}</option>
@@ -111,10 +109,9 @@
           <div class="form-row-group">
             <div class="input-group">
               <label>Price (₹)</label>
-              <input type="number" [(ngModel)]="currentProduct.price" name="price" required />
+              <input type="number" step="0.01" [(ngModel)]="currentProduct.price" name="price" required />
             </div>
 
-            <!-- FIX: Status changed from free-text input to a select with defined options -->
             <div class="input-group">
               <label>Status</label>
               <select [(ngModel)]="currentProduct.status" name="status" required>
@@ -126,7 +123,6 @@
               </select>
             </div>
 
-            <!-- FIX: Stock Unit field restored (was missing from the form) -->
             <div class="input-group">
               <label>Stock Unit</label>
               <input
@@ -139,33 +135,49 @@
             </div>
           </div>
 
-          <div class="input-group">
-            <label>Availability</label>
-            <textarea [(ngModel)]="currentProduct.available" name="available" rows="3"></textarea>
-          </div>
-
           <div class="form-row-group">
             <div class="input-group">
-              <label>Current Stock</label>
+              <label>
+                {{ currentProduct.id ? 'Current Stock (read-only - use Adjust Stock instead)' : 'Starting Stock' }}
+              </label>
               <input
                 type="number"
+                step="0.001"
                 [(ngModel)]="currentProduct.stockQuantity"
                 name="stock"
+                [disabled]="!!currentProduct.id"
                 required
               />
             </div>
+
             <div class="input-group">
-              <label>Product Image</label>
-              <!-- FIX: [required] binding corrected from static string to proper Angular property binding -->
-              <input
-                type="file"
-                (change)="onFileSelected($event)"
-                name="productImageFile"
-                accept="image/*"
-                [required]="!currentProduct.id"
-                class="file-input-custom"
-              />
+              <label>Available for sale</label>
+              <select [(ngModel)]="currentProduct.available" name="available">
+                <option [ngValue]="true">Yes</option>
+                <option [ngValue]="false">No</option>
+              </select>
             </div>
+          </div>
+
+          <div class="input-group">
+            <label>Description</label>
+            <textarea [(ngModel)]="currentProduct.description" name="description" rows="3"></textarea>
+          </div>
+
+          <div class="input-group">
+            <label>Product Image</label>
+            <input
+              type="file"
+              (change)="onFileSelected($event)"
+              name="productImageFile"
+              accept="image/*"
+              class="file-input-custom"
+            />
+            <p class="field-hint">
+              Uploaded once the product is saved. A product can carry more than one photo -
+              editing an existing product and choosing another file adds another image rather
+              than replacing the first.
+            </p>
           </div>
 
           <div class="form-row-group date-group">
@@ -190,7 +202,7 @@
           </div>
 
           <div class="form-actions">
-            <button type="submit" class="btn btn-save">Save Changes</button>
+            <button type="submit" class="btn btn-save" [disabled]="isUploading">Save Changes</button>
             <button type="button" class="btn btn-cancel" (click)="isEditing = false">Cancel</button>
           </div>
         </form>

@@ -1,0 +1,69 @@
+<div class="payment-management-container">
+  <div class="page-header">
+    <h1>Payment Transactions</h1>
+    <p>Every payment attempt, across all orders - COD entries show as PENDING until collected.</p>
+  </div>
+
+  <div class="filter-controls">
+    <input
+      type="text"
+      placeholder="Search by order ID, transaction ID, or gateway payment ID..."
+      [(ngModel)]="searchTerm"
+      class="search-input"
+      name="search-term"
+    />
+    <select [(ngModel)]="selectedStatus" class="status-select" name="status-filter">
+      @for (status of statusOptions; track status) {
+        <option [value]="status">{{ status }}</option>
+      }
+    </select>
+  </div>
+
+  @if (isLoading) {
+    <p>Loading payments...</p>
+  } @else if (errorMsg) {
+    <p class="error-msg">{{ errorMsg }}</p>
+  } @else {
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Transaction ID</th>
+            <th>Order ID</th>
+            <th>Method</th>
+            <th>Amount</th>
+            <th>Gateway Payment ID</th>
+            <th>Status</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (payment of filteredPayments; track payment.id) {
+            <tr>
+              <td class="mono">#{{ payment.id }}</td>
+              <td class="mono">#{{ payment.orderId }}</td>
+              <td>{{ payment.method }}</td>
+              <td>₹ {{ payment.amount | number: '1.2-2' }}</td>
+              <td class="mono">{{ payment.gatewayPaymentId || '—' }}</td>
+              <td>
+                <span [class]="'status-badge status-' + payment.status.toLowerCase()">
+                  {{ payment.status }}
+                </span>
+                @if (payment.status === 'FAILED' && payment.failureReason) {
+                  <span class="failure-reason" [title]="payment.failureReason">ⓘ</span>
+                }
+              </td>
+              <td>{{ payment.createdAt | date: 'short' }}</td>
+              <td>
+                @if (payment.status === 'SUCCESS') {
+                  <button class="btn-action" (click)="refund(payment)">Refund</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

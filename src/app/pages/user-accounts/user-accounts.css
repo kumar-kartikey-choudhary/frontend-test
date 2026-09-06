@@ -1,8 +1,280 @@
 .account-container {
-  max-width: 600px;
+  max-width: 700px;
   margin: 40px auto;
   padding: 0 16px;
   min-height: calc(100vh - 660px);
+}
+
+.account-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.tab-btn {
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-btn:hover {
+  color: #1a1a1a;
+}
+
+.tab-btn.active {
+  color: #f5a623;
+  border-bottom-color: #f5a623;
+}
+
+.unread-pill {
+  background: #e74c3c;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.section-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.btn-primary {
+  padding: 10px 18px;
+  background: #f5a623;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #e09515;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  background: #fafafa;
+  border-radius: 12px;
+}
+
+/* ---- Addresses ---- */
+.address-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.address-card {
+  position: relative;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.address-card.is-default {
+  border-color: #f5a623;
+}
+
+.default-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #f5a623;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.address-card h3 {
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #1a1a1a;
+}
+
+.address-card p {
+  font-size: 14px;
+  color: #555;
+  margin: 2px 0;
+}
+
+.address-card .landmark {
+  color: #888;
+  font-style: italic;
+}
+
+.card-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #f5a623;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-link.btn-danger {
+  color: #e74c3c;
+}
+
+.address-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.address-form-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.input-group {
+  margin-bottom: 14px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.form-row-group {
+  display: flex;
+  gap: 10px;
+}
+
+.form-row-group .input-group {
+  flex: 1;
+}
+
+/* ---- Notifications ---- */
+.notification-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notification-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.notification-row:hover {
+  background: #fafafa;
+}
+
+.notification-row.unread {
+  background: #fff8ed;
+  border-color: #f5a62355;
+}
+
+.notification-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.notification-body {
+  flex: 1;
+}
+
+.notification-title {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 14px;
+  margin: 0 0 2px;
+}
+
+.notification-message {
+  font-size: 13px;
+  color: #666;
+  margin: 0 0 4px;
+}
+
+.notification-date {
+  font-size: 12px;
+  color: #999;
+  margin: 0;
+}
+
+.btn-icon-delete {
+  background: none;
+  border: none;
+  color: #bbb;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+}
+
+.btn-icon-delete:hover {
+  color: #e74c3c;
 }
 
 .loading-state {

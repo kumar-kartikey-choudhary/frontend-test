@@ -4,3 +4,5 @@ export * from './order.model';
 export * from './user.model';
 export * from './auth.model';
 export * from './ui.model';
+export * from './address.model';
+export * from './notification';

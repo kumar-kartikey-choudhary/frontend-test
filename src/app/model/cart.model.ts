@@ -1,19 +1,21 @@
+/** Mirrors backend CartItemDto (pratik-dairy-cart / dto/CartItemDto.java). */
 export interface CartItemDto {
   id?: string;
   username?: string;
   productId: string;
   productName: string;
-  productImageUrl?: string | any;
+  /** Id of the product's primary image - build a URL with ProductService.imageUrl(id), not raw bytes. */
+  productImageId?: string;
+  /** The product's own stockUnit (e.g. "kg", "pcs") - display only, e.g. "2.5 kg". */
   unit: string;
-  weight: string;
+  /** In the product's own stockUnit multiples. No more weight-variant to pick - the product itself defines the unit. */
   quantity: number;
   pricePerUnit: number;
   subtotal: number;
 }
 
+/** Mirrors backend AddToCart (pratik-dairy-cart / dto/AddToCart.java). */
 export interface AddToCart {
   productId: string;
   quantity: number;
-  weight: string;
-  totalAmount?: number;
 }

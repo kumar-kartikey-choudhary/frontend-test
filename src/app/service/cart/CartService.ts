@@ -5,53 +5,23 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from '../login/auth-service';
 import type { CartItemDto, AddToCart } from '../../model/cart.model';
+import type { OrderResponse } from '../../model/order.model';
 
 export type { CartItemDto, AddToCart };
-
-function toGrams(unit: string): number {
-  if (!unit) return -1;
-  const normalized = unit.trim().toLowerCase().replace(/\s+/g, '');
-  const match = normalized.match(/^([\d.]*)([a-z]+)$/);
-  if (!match) return -1;
-
-  const quantity = match[1] ? parseFloat(match[1]) : 1; // "kg" => 1 kg
-  if (isNaN(quantity) || quantity <= 0) return -1;
-
-  const KILO_UNITS = ['kg', 'kgs', 'kilogram', 'l', 'lt', 'ltr', 'litre', 'liter'];
-  const BASE_UNITS = ['g', 'gm', 'gms', 'gram', 'grams', 'ml'];
-
-  if (KILO_UNITS.includes(match[2])) return quantity * 1000;
-  if (BASE_UNITS.includes(match[2])) return quantity;
-  return -1;
-}
-
-
-
-/** Mirrors WeightPricing.java on the backend — kept for instant UI feedback only. Backend always recalculates the real price before saving. */
-export function computeMultiplier(selectedWeight: string, productBaseUnit: string): number {
-  const selectedGrams = toGrams(selectedWeight);
-  const baseGrams = toGrams(productBaseUnit);
-  if (selectedGrams <= 0 || baseGrams <= 0) return 1; // unit isn't weight-based (litre/pcs) -> no change
-  return selectedGrams / baseGrams;
-}
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
   private cartUrl = `${environment.apiBaseUrl}/carts`;
   private orderUrl = `${environment.apiBaseUrl}/orders`;
 
-  // ✅ Global cart quantity state — keyed by `${productId}_${weight}` so the
-  // same product with a different weight is tracked as a separate line.
-  private cartStateSubject = new BehaviorSubject<{ [cartKey: string]: number }>({});
+  // Global cart quantity state, keyed by productId. There's no weight-variant dimension
+  // anymore - a product IS its own unit, so one cart line per product per user.
+  private cartStateSubject = new BehaviorSubject<{ [productId: string]: number }>({});
   cartState$ = this.cartStateSubject.asObservable();
 
-  // ✅ Global loading state — har product ka apna loading flag
-  private loadingStateSubject = new BehaviorSubject<{ [cartKey: string]: boolean }>({});
+  // Global loading state - one flag per product.
+  private loadingStateSubject = new BehaviorSubject<{ [productId: string]: boolean }>({});
   loadingState$ = this.loadingStateSubject.asObservable();
-
-  // Currently selected weight per product, defaults to 250g. Purely a UI concern.
-  private selectedWeightSubject = new BehaviorSubject<{ [productId: string]: string }>({});
-  selectedWeight$ = this.selectedWeightSubject.asObservable();
 
   constructor(
     private http: HttpClient,
@@ -68,37 +38,17 @@ export class CartService {
     return true;
   }
 
-  private cartKey(productId: string, weight: string): string {
-    return `${productId}_${weight}`;
-  }
-
-  // ---------- Weight selection (per product, before adding to cart) ----------
-  selectWeight(productId: string, weight: string): void {
-    this.selectedWeightSubject.next({ ...this.selectedWeightSubject.value, [productId]: weight });
-  }
-
-  getSelectedWeight(productId: string): string {
-    return this.selectedWeightSubject.value[productId] || '1kg';
-  }
-
-  /** Display-only price, computed relative to THIS product's own stored unit (e.g. Buffalo Ghee priced per "1kg"). Real price is always recalculated on the backend. */
-  getDisplayPrice(basePrice: number, productBaseUnit: string, productId: string): number {
-    const weight = this.getSelectedWeight(productId);
-    const multiplier = computeMultiplier(weight, productBaseUnit);
-    return Math.round(basePrice * multiplier * 100) / 100;
-  }
-
   // ---------- Internal state setters ----------
-  private setLoading(cartKey: string, value: boolean): void {
-    this.loadingStateSubject.next({ ...this.loadingStateSubject.value, [cartKey]: value });
+  private setLoading(productId: string, value: boolean): void {
+    this.loadingStateSubject.next({ ...this.loadingStateSubject.value, [productId]: value });
   }
 
-  private setCartQty(cartKey: string, qty: number): void {
+  private setCartQty(productId: string, qty: number): void {
     const current = { ...this.cartStateSubject.value };
     if (qty <= 0) {
-      delete current[cartKey];
+      delete current[productId];
     } else {
-      current[cartKey] = qty;
+      current[productId] = qty;
     }
     this.cartStateSubject.next(current);
   }
@@ -107,89 +57,81 @@ export class CartService {
   syncCartFromBackend(): void {
     this.getCart().subscribe({
       next: (items) => {
-        const state: { [cartKey: string]: number } = {};
-        items.forEach((item) => (state[this.cartKey(item.productId, item.weight)] = item.quantity));
+        const state: { [productId: string]: number } = {};
+        items.forEach((item) => (state[item.productId] = item.quantity));
         this.cartStateSubject.next(state);
       },
       error: (err) => console.error('Could not load cart:', err),
     });
   }
 
-  // ---------- Global cart actions (har component ye use karega) ----------
+  // ---------- Global cart actions (used directly by components) ----------
 
-  /** Add to cart — login check + API call + state update, sab ek jagah */
-  addToCart(productId: string): void {
+  /** Add to cart - login check + API call + state update, all in one place */
+  addToCart(productId: string, quantity: number = 1): void {
     if (!this.requireLogin()) return;
 
-    const weight = this.getSelectedWeight(productId);
-    const key = this.cartKey(productId, weight);
-
-    this.setLoading(key, true);
-    this.addItemToCart(productId, 1, weight).subscribe({
+    this.setLoading(productId, true);
+    this.addItemToCart(productId, quantity).subscribe({
       next: () => {
-        this.setCartQty(key, 1);
-        this.setLoading(key, false);
+        this.setCartQty(productId, quantity);
+        this.setLoading(productId, false);
       },
       error: (err) => {
         console.error('Add to cart failed:', err);
-        this.setLoading(key, false);
+        this.setLoading(productId, false);
       },
     });
   }
 
   /** Quantity +1 */
-  increment(productId: string, weight: string = this.getSelectedWeight(productId)): void {
+  increment(productId: string): void {
     if (!this.requireLogin()) return;
-    const key = this.cartKey(productId, weight);
-    const newQty = (this.cartStateSubject.value[key] || 0) + 1;
+    const newQty = (this.cartStateSubject.value[productId] || 0) + 1;
     this.updateQuantity(productId, newQty).subscribe({
-      next: () => this.setCartQty(key, newQty),
+      next: () => this.setCartQty(productId, newQty),
       error: (err) => console.error('Update failed:', err),
     });
   }
 
-  /** Quantity -1, 0 ho to remove */
-  decrement(productId: string, weight: string = this.getSelectedWeight(productId)): void {
+  /** Quantity -1, removes the line at 0 */
+  decrement(productId: string): void {
     if (!this.requireLogin()) return;
-    const key = this.cartKey(productId, weight);
-    const newQty = (this.cartStateSubject.value[key] || 0) - 1;
+    const newQty = (this.cartStateSubject.value[productId] || 0) - 1;
     if (newQty <= 0) {
       this.removeItem(productId).subscribe({
-        next: () => this.setCartQty(key, 0),
+        next: () => this.setCartQty(productId, 0),
         error: (err) => console.error('Remove failed:', err),
       });
     } else {
       this.updateQuantity(productId, newQty).subscribe({
-        next: () => this.setCartQty(key, newQty),
+        next: () => this.setCartQty(productId, newQty),
         error: (err) => console.error('Update failed:', err),
       });
     }
   }
 
-  /** HTML mein check karne ke liye */
-  isInCart(productId: string, weight: string = this.getSelectedWeight(productId)): boolean {
-    return (this.cartStateSubject.value[this.cartKey(productId, weight)] || 0) > 0;
+  isInCart(productId: string): boolean {
+    return (this.cartStateSubject.value[productId] || 0) > 0;
   }
 
-  getQuantity(productId: string, weight: string = this.getSelectedWeight(productId)): number {
-    return this.cartStateSubject.value[this.cartKey(productId, weight)] || 0;
+  getQuantity(productId: string): number {
+    return this.cartStateSubject.value[productId] || 0;
   }
 
-  isLoading(productId: string, weight: string = this.getSelectedWeight(productId)): boolean {
-    return this.loadingStateSubject.value[this.cartKey(productId, weight)] || false;
+  isLoading(productId: string): boolean {
+    return this.loadingStateSubject.value[productId] || false;
   }
 
-  // ---------- Raw API calls (shopping-cart.ts inhe directly bhi use karta hai) ----------
+  // ---------- Raw API calls (payment.ts uses getCart()/placeOrder() directly) ----------
 
   getCart(): Observable<CartItemDto[]> {
     return this.http.get<CartItemDto[]>(this.cartUrl);
   }
 
-  addItemToCart(productId: string, quantity: number, weight: string): Observable<any> {
-    const payload: AddToCart = { productId, quantity, weight };
-    return this.http.post<any>(`${this.cartUrl}/items`, payload, {
-      responseType: 'text' as 'json',
-    });
+  addItemToCart(productId: string, quantity: number): Observable<CartItemDto> {
+    const payload: AddToCart = { productId, quantity };
+    return this.http.post<CartItemDto>(`${this.cartUrl}/items`, payload);
   }
 
   updateQuantity(productId: string, newQty: number): Observable<CartItemDto> {
@@ -200,7 +142,20 @@ export class CartService {
     return this.http.delete<void>(`${this.cartUrl}/items/${productId}`);
   }
 
-  checkout(): Observable<any> {
-    return this.http.post<any>(`${this.orderUrl}/create`, {});
+  /**
+   * Creates the order (stock reserved, order-service is the source of truth from here).
+   * Called from the Payment page (Payment.placeOrder()) after the customer picks a payment
+   * method - the cart page itself only reviews items and hands off via router navigation to
+   * /payment, it no longer calls this. couponCode is optional; omit it to skip the discount.
+   */
+  placeOrder(couponCode?: string): Observable<OrderResponse> {
+    // Must be explicitly typed (not inferred from a ternary) - an inferred union type like
+    // `{couponCode: string} | {}` makes TypeScript unable to match HttpClient's post<T>()
+    // overload for `params`, and it silently falls back to a completely different overload
+    // (the raw responseType: 'arraybuffer' one) - hence the confusing "Observable<ArrayBuffer>
+    // is not assignable to Observable<OrderResponse>" error. Same fix already applied in
+    // order-admin-service.ts.
+    const params: Record<string, string> = couponCode ? { couponCode } : {};
+    return this.http.post<OrderResponse>(`${this.orderUrl}/create`, {}, { params });
   }
 }

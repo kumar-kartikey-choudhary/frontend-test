@@ -9,6 +9,7 @@ export interface UserDto {
   lastName: string;
   username: string;
   email: string;
+  phoneNumber?: string;
   role: string; // 'ROLE_ADMIN' | 'ROLE_CUSTOMER'
   createdAt?: string;
 }
@@ -20,5 +21,6 @@ export interface SignUp {
   lastName: string;
   username: string;
   email: string;
+  phoneNumber?: string;
   password: string;
 }

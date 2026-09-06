@@ -1,12 +1,10 @@
-import { environment } from '../../../environments/environment';
-// src/app/pages/my-orders/my-orders.component.ts
-
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { DomSanitizer } from '@angular/platform-browser';
-import type { OrderResponse, OrderItemDto } from '../../model';
+import { environment } from '../../../environments/environment';
+import { ProductService } from '../../service/product/product-service';
+import type { OrderResponse } from '../../model';
 
 @Component({
   selector: 'app-my-orders',
@@ -24,7 +22,7 @@ export class MyOrders implements OnInit {
 
   constructor(
     private http: HttpClient,
-    private sanitizer: DomSanitizer,
+    private productService: ProductService,
   ) {}
 
   ngOnInit(): void {
@@ -35,15 +33,10 @@ export class MyOrders implements OnInit {
     this.isLoading = true;
     this.http.get<OrderResponse[]>(this.orderUrl).subscribe({
       next: (data) => {
-        const mappedOrders = data.map((order) => ({
-          ...order,
-          items: order.items.map((item) => this.mapItemImage(item)),
-        }));
-        this.orders = mappedOrders.sort((a, b) => {
-          const dateA = new Date(a.orderDateTime).getTime();
-          const dateB = new Date(b.orderDateTime).getTime();
-          return dateB - dateA; // B - A ensures descending order
-        });
+        // Newest first
+        this.orders = [...data].sort(
+          (a, b) => new Date(b.orderDateTime).getTime() - new Date(a.orderDateTime).getTime(),
+        );
         this.isLoading = false;
       },
       error: () => {
@@ -53,15 +46,8 @@ export class MyOrders implements OnInit {
     });
   }
 
-  private mapItemImage(item: OrderItemDto): OrderItemDto {
-    if (item.imageData) {
-      return {
-        ...item,
-        imageData: this.sanitizer.bypassSecurityTrustUrl(
-          `data:image/jpeg;base64,${item.imageData}`,
-        ),
-      };
-    }
-    return { ...item, imageData: 'assets/images/placeholder.png' };
+  /** Build an <img src> from the product's primary image id - falls back to a placeholder. */
+  itemImageUrl(imageId: string | undefined): string {
+    return imageId ? this.productService.imageUrl(imageId) : 'assets/images/placeholder.png';
   }
 }

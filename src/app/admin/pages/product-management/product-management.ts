@@ -1,16 +1,13 @@
-// // src/app/admin/pages/product-management/product-management.component.ts
-
 import { Component, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NgFor, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { ProductService } from '../../../service/product/product-service';
 import type { Product } from '../../../model';
 
 /**
  * Empty-string id is the "this is a new, unsaved product" sentinel.
  * Backend ids are UUID strings (BaseDto.id), generated server-side on
- * create — they are never `0`, so `0` can't be used as a sentinel here
+ * create - they are never `0`, so `0` can't be used as a sentinel here
  * the way the previous `number`-typed model did.
  */
 const NEW_PRODUCT_ID = '';
@@ -24,39 +21,35 @@ const NEW_PRODUCT_ID = '';
 })
 export class ProductManagement implements OnInit {
   // State variables
-  isEditing: boolean = false;
+  isEditing = false;
   allProducts: Product[] = [];
   currentProduct: any = this.getEmptyProductModel();
-  categories = ['All', 'Dairy', 'Sweets', 'Snacks', 'Cold Drinks'];
+  // Backend enum: Dairy | Sweets | Bakery | Snacks | Cold_Drinks
+  categories = ['All', 'Dairy', 'Sweets', 'Bakery', 'Snacks', 'Cold_Drinks'];
 
-  // NEW STATE: File handling and loading
-  selectedFile: File | null = null; // CRITICAL: Holds the file selected by the user
-  isUploading: boolean = false; // State to track ongoing upload
+  // File handling and loading
+  selectedFile: File | null = null;
+  isUploading = false;
 
-  // NEW: Sweet Types List for the conditional dropdown
-  types = ['All', 'Kaju', 'Barfee', 'Peda', 'DryFruit', 'Laddoo', 'Chhena', 'GulabJamun'];
+  // Sweet-type dropdown only shown when the selected category is "Sweets".
+  types = ['Kaju', 'Barfee', 'Peda', 'Dry_Fruit', 'Laddoo', 'Chenna', 'Gulab_Jamun', 'Jalebi'];
 
-  searchTerm: string = '';
-  selectedCategory: string = 'All';
+  searchTerm = '';
+  selectedCategory = 'All';
 
-  // Inject the service
   constructor(private service: ProductService) {}
 
   ngOnInit(): void {
     this.loadProducts();
   }
 
-  // NEW METHOD: Captures the selected file from the HTML input
   onFileSelected(event: any): void {
     const file = event.target.files[0];
     if (file) {
       this.selectedFile = file;
-      // When a new file is selected, clear any old URL placeholder if it exists
-      this.currentProduct.imageUrl = '';
     }
   }
 
-  // Placeholder to create a clean model
   private getEmptyProductModel(): any {
     return {
       id: NEW_PRODUCT_ID,
@@ -64,13 +57,12 @@ export class ProductManagement implements OnInit {
       price: 0,
       available: true,
       stockQuantity: 0,
-      stockUnit: 'KG',
+      stockUnit: 'kg',
       category: 'Dairy',
       type: '',
       description: '',
       manufactureDate: new Date().toISOString().substring(0, 10),
       expiryDate: '',
-      imageUrl: '',
       status: 'In Stock',
     };
   }
@@ -80,7 +72,7 @@ export class ProductManagement implements OnInit {
    */
   addNewProducts(): void {
     this.currentProduct = this.getEmptyProductModel();
-    this.selectedFile = null; // Ensure file input is reset
+    this.selectedFile = null;
     this.isEditing = true;
   }
 
@@ -88,83 +80,65 @@ export class ProductManagement implements OnInit {
    * Method to initiate editing a product (used by the HTML button).
    */
   editProduct(product: Product): void {
-    this.currentProduct = {
-      ...product,
-      type: (product as any).type || '',
-    };
-    this.selectedFile = null; // Clear file selection when editing
+    this.currentProduct = { ...product };
+    this.selectedFile = null;
     this.isEditing = true;
   }
 
   saveProduct(): void {
-    const productPayload: Product = { ...this.currentProduct };
-
-    // Guard against double submission
     if (this.isUploading) return;
 
-    // A blank id means this is a new, unsaved product — the backend generates
-    // the real UUID on create, so we never send an id for CREATE.
+    if (!this.currentProduct.category) {
+      alert('Please select a category.');
+      return;
+    }
+    if (!this.currentProduct.price || this.currentProduct.price <= 0) {
+      alert('Price must be greater than 0.');
+      return;
+    }
 
+    const productPayload: Partial<Product> = { ...this.currentProduct };
     this.isUploading = true;
+    const isNew = !productPayload.id;
 
-    // --- CASE 1: CREATE NEW PRODUCT (POST) ---
-    if (!productPayload.id) {
-      if (!this.selectedFile) {
-        alert('New product requires an image file to be selected.');
+    const save$ = isNew
+      ? this.service.addProduct(productPayload)
+      : this.service.updateProduct(this.currentProduct.id, productPayload);
+
+    save$.subscribe({
+      next: (saved) => this.afterSave(saved),
+      error: (err) => {
+        console.error(isNew ? 'Add product failed:' : 'Update failed:', err);
+        alert((isNew ? 'Add' : 'Update') + ' failed. Check API connection.');
         this.isUploading = false;
-        return;
-      }
+      },
+    });
+  }
 
-      // Call the combined service method
-      this.service.addProduct(productPayload, this.selectedFile).subscribe({
-        next: (response) => {
-          alert(`Product '${response.productName}' added successfully!`);
-          this.isEditing = false;
-          this.isUploading = false;
-          this.selectedFile = null;
-          this.loadProducts();
-        },
+  private afterSave(saved: Product): void {
+    // Image upload happens after the product exists, since ProductImage rows are keyed off a
+    // real product id. A failed image upload shouldn't undo the product save that already
+    // succeeded, so it's reported separately rather than rolled back.
+    if (this.selectedFile) {
+      this.service.addImage(saved.id, this.selectedFile, true).subscribe({
+        next: () => this.finishSave(saved.productName),
         error: (err) => {
-          console.error('Add product failed:', err);
-          alert('Add failed. Check API connection and file size limits.');
-          this.isUploading = false;
+          console.error('Image upload failed:', err);
+          alert(`Product '${saved.productName}' saved, but the image failed to upload.`);
+          this.finishSave(saved.productName);
         },
       });
+    } else {
+      this.finishSave(saved.productName);
     }
-    // --- CASE 2: UPDATE EXISTING PRODUCT (PUT) ---
-    else {
-      if (!this.selectedFile) {
-        this.service.updateProduct(productPayload.id, productPayload).subscribe({
-          next: (response) => {
-            alert(`Product #${response.id} updated successfully!`);
-            this.isEditing = false;
-            this.isUploading = false;
-            this.selectedFile = null;
-            this.loadProducts();
-          },
-          error: (err) => {
-            console.error('Update failed:', err);
-            alert('Update failed. Check API connection and file size limits.');
-            this.isUploading = false;
-          },
-        });
-      } else {
-        this.service.updateProduct(productPayload.id, productPayload, this.selectedFile).subscribe({
-          next: (response) => {
-            alert(`Product #${response.id} updated successfully!`);
-            this.isEditing = false;
-            this.isUploading = false;
-            this.selectedFile = null;
-            this.loadProducts();
-          },
-          error: (err) => {
-            console.error('Update failed:', err);
-            alert('Update failed. Check API connection and file size limits.');
-            this.isUploading = false;
-          },
-        });
-      }
-    }
+  }
+
+  private finishSave(productName: string): void {
+    alert(`Product '${productName}' saved successfully!`);
+    this.isEditing = false;
+    this.isUploading = false;
+    this.selectedFile = null;
+    this.loadProducts();
   }
 
   /**
@@ -177,11 +151,9 @@ export class ProductManagement implements OnInit {
     if (this.selectedCategory !== 'All') {
       products = products.filter((p) => p.category === this.selectedCategory);
     }
-
     if (term) {
       products = products.filter((p) => p.productName.toLowerCase().includes(term));
     }
-
     return products;
   }
 
@@ -189,10 +161,8 @@ export class ProductManagement implements OnInit {
    * Loads product data from the backend API.
    */
   loadProducts(): void {
-    this.service.getAllProducts().subscribe({
-      next: (data: any) => {
-        this.allProducts = data;
-      },
+    this.service.getAllProducts(true).subscribe({
+      next: (data) => (this.allProducts = data),
       error: (err) => console.error('Failed to fetch products', err),
     });
   }

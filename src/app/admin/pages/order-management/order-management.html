@@ -46,6 +46,7 @@
                             <th>Customer</th>
                             <th>Date & Time</th>
                             <th>Total</th>
+                            <th>Coupon</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -57,6 +58,13 @@
                                 <td>{{ order.username }}</td>
                                 <td>{{ order.orderDateTime | date:'short' }}</td>
                                 <td class="total-col">₹ {{ order.totalAmount | number:'1.2-2' }}</td>
+                                <td>
+                                    @if (order.couponCode) {
+                                        <span class="coupon-badge">{{ order.couponCode }} (-₹{{ order.discountAmount | number:'1.2-2' }})</span>
+                                    } @else {
+                                        <span class="no-coupon">—</span>
+                                    }
+                                </td>
                                 <td>
                                     <span [class]="'status-badge status-' + order.status.toLowerCase()">
                                         {{ order.status }}

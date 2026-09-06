@@ -16,7 +16,7 @@ export const routes: Routes = [
   {
     path: 'signup',
     title: 'Create an account | Pratik Dairy & Sweets',
-    loadComponent: () => import('./pages/signup/signup').then((m) => m.SignupService),
+    loadComponent: () => import('./pages/signup/signup').then((m) => m.Signup),
   },
 
   // ---------------------------------------------------------- CUSTOMER
@@ -84,6 +84,12 @@ export const routes: Routes = [
         canActivate: [customerGuard],
         loadComponent: () =>
           import('./pages/shopping-cart/shopping-cart').then((m) => m.ShoppingCart),
+      },
+      {
+        path: 'payment',
+        title: 'Payment | Pratik Dairy & Sweets',
+        canActivate: [customerGuard],
+        loadComponent: () => import('./pages/payment/payment/payment').then((m) => m.Payment),
       },
       {
         path: 'orders',

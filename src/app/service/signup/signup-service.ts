@@ -2,25 +2,9 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { SignUp, UserDto } from '../../model';
 
-export interface SignUp {
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  username: string;
-  email: string;
-  password: string;
-}
-
-export interface UserDto {
-  id: number;
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  username: string;
-  email: string;
-  role: string;
-}
+export type { SignUp, UserDto };
 
 @Injectable({ providedIn: 'root' })
 export class SignupService {

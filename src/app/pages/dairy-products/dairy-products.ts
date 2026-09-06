@@ -1,46 +1,39 @@
 import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { ProductService } from '../../service/product/product-service';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
+import { ProductService } from '../../service/product/product-service';
 import { CartService } from '../../service/cart/CartService';
-
-interface DairyProduct {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  unit: string;
-  imageUrl: string | SafeUrl;
-}
+import type { Product } from '../../model';
 
 @Component({
   selector: 'app-dairy-products',
   templateUrl: './dairy-products.html',
   styleUrls: ['./dairy-products.css'],
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, FormsModule],
 })
 export class DairyProducts implements OnInit {
-  dairyProducts: DairyProduct[] = [];
-  isLoading: boolean = false;
+  filterText = '';
+  products: Product[] = [];
+  isLoading = false;
 
   constructor(
-    public cartService: CartService,
     private productService: ProductService,
-    private sanitizer: DomSanitizer,
+    public cartService: CartService,
   ) {}
 
   ngOnInit(): void {
-    this.loadDairyProducts();
+    this.loadProducts();
+    this.cartService.syncCartFromBackend();
   }
 
-  loadDairyProducts(): void {
+  loadProducts(): void {
     this.isLoading = true;
-    this.productService.getAllProducts().subscribe({
-      next: (data: any[]) => {
-        const filtered = data.filter((p) => p.category?.toLowerCase() === 'dairy');
-        this.dairyProducts = filtered.map((p) => this.mapApiProduct(p));
+    // 'Dairy' matches the backend Category enum (product-api / enums/Category.java).
+    this.productService.getProductsByCategory('Dairy').subscribe({
+      next: (data) => {
+        this.products = data;
         this.isLoading = false;
       },
       error: (err) => {
@@ -50,20 +43,15 @@ export class DairyProducts implements OnInit {
     });
   }
 
-  private mapApiProduct(p: any): DairyProduct {
-    let finalImageUrl: string | SafeUrl = 'assets/images/placeholder.png';
-    if (p.imageData && p.imageType) {
-      finalImageUrl = this.sanitizer.bypassSecurityTrustUrl(
-        `data:${p.imageType};base64,${p.imageData}`,
-      );
-    }
-    return {
-      id: p.id,
-      name: p.productName || 'N/A',
-      description: p.description || '',
-      price: p.price || 0,
-      unit: p.stockUnit || 'N/A',
-      imageUrl: finalImageUrl,
-    };
+  /** Build an <img src> from the product's primary image id - falls back to a placeholder. */
+  imageUrlFor(product: Product): string {
+    const primary = product.images?.find((i) => i.primary) ?? product.images?.[0];
+    return primary ? this.productService.imageUrl(primary.id) : 'assets/images/placeholder.png';
+  }
+
+  get filteredProducts(): Product[] {
+    const filter = this.filterText.toLowerCase().trim();
+    if (!filter) return this.products;
+    return this.products.filter((p) => p.productName.toLowerCase().includes(filter));
   }
 }

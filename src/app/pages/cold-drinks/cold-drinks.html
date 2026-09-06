@@ -32,37 +32,45 @@
       }
     </h2>
 
-    @for (category of filteredCategories; track category.name) {
-      @if (category.items.length > 0) {
-        <div class="category-header">
-          <h3>{{ category.name }}</h3>
-        </div>
+    <div *ngIf="isLoading" class="loading-state">Loading drinks...</div>
 
-        <div class="menu-grid">
-          @for (drink of category.items; track drink.name) {
-            <div class="drink-card">
-              <div class="image-box">
-                <img [src]="drink.imagePath" [alt]="drink.name" class="drink-image" />
-                <span class="category-tag">{{ drink.category }}</span>
-              </div>
+    <div class="menu-grid" *ngIf="!isLoading">
+      @for (drink of filteredProducts; track drink.id) {
+        <div class="drink-card">
+          <div class="image-box">
+            <img [src]="imageUrlFor(drink)" [alt]="drink.productName" class="drink-image" />
+          </div>
 
-              <div class="card-details">
-                <div class="name-price">
-                  <h3>{{ drink.name }}</h3>
-                  <span class="price-tag">{{ drink.price }}</span>
-                </div>
-
-                <p class="description">{{ drink.description }}</p>
-
-                <button class="btn-order">Add to Cart</button>
-              </div>
+          <div class="card-details">
+            <div class="name-price">
+              <h3>{{ drink.productName }}</h3>
+              <span class="price-tag">₹{{ drink.price }} / {{ drink.stockUnit }}</span>
             </div>
-          }
+
+            <p class="description">{{ drink.description }}</p>
+
+            @if (!cartService.isInCart(drink.id)) {
+              <button
+                class="btn-order"
+                [disabled]="cartService.isLoading(drink.id)"
+                (click)="cartService.addToCart(drink.id)"
+              >
+                {{ cartService.isLoading(drink.id) ? 'Adding...' : 'Add to Cart' }}
+              </button>
+            }
+            @if (cartService.isInCart(drink.id)) {
+              <div class="quantity-controls">
+                <button class="qty-btn" (click)="cartService.decrement(drink.id)">−</button>
+                <span class="qty-display">{{ cartService.getQuantity(drink.id) }}</span>
+                <button class="qty-btn" (click)="cartService.increment(drink.id)">+</button>
+              </div>
+            }
+          </div>
         </div>
       }
-    }
+    </div>
 
-    @if (filteredCategories.length === 0 && filterText) {
+    @if (!isLoading && filteredProducts.length === 0 && filterText) {
       <div class="no-results">
         <p>😔 No drinks found matching "{{ filterText }}". Please try a different item.</p>
         <button class="btn-clear-filter" (click)="filterText = ''">Clear Search</button>

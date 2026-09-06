@@ -1,55 +1,195 @@
 <div class="account-container">
-  <div *ngIf="isLoading" class="loading-state">
-    <p>Profile load ho raha hai...</p>
+  <div class="account-tabs">
+    <button class="tab-btn" [class.active]="activeTab === 'profile'" (click)="selectTab('profile')">
+      Profile
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'addresses'" (click)="selectTab('addresses')">
+      Addresses
+    </button>
+    <button class="tab-btn" [class.active]="activeTab === 'notifications'" (click)="selectTab('notifications')">
+      Notifications
+      <span *ngIf="unreadCount > 0" class="unread-pill">{{ unreadCount }}</span>
+    </button>
   </div>
 
-  <div *ngIf="errorMsg" class="error-msg">{{ errorMsg }}</div>
-  <div *ngIf="successMsg" class="success-msg">{{ successMsg }}</div>
+  <!-- ==================== PROFILE TAB ==================== -->
+  <div *ngIf="activeTab === 'profile'">
+    <div *ngIf="isLoading" class="loading-state">Loading profile...</div>
+    <div *ngIf="errorMsg" class="error-msg">{{ errorMsg }}</div>
+    <div *ngIf="successMsg" class="success-msg">{{ successMsg }}</div>
 
-  <div *ngIf="!isLoading && profile" class="profile-card">
-    <h2>Mera Account</h2>
+    <div *ngIf="profile && !isLoading" class="profile-card">
+      <h2>My Profile</h2>
 
-    <div *ngIf="!isEditing" class="profile-view">
-      <div class="profile-row">
-        <span>Naam:</span>
-        <strong>{{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}</strong>
+      <div *ngIf="!isEditing">
+        <div class="profile-row">
+          <span>Name:</span>
+          <strong>{{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}</strong>
+        </div>
+        <div class="profile-row">
+          <span>Username:</span>
+          <strong>{{ profile.username }}</strong>
+        </div>
+        <div class="profile-row">
+          <span>Email:</span>
+          <strong>{{ profile.email }}</strong>
+        </div>
+        <div class="profile-row">
+          <span>Phone:</span>
+          <strong>{{ profile.phoneNumber || '—' }}</strong>
+        </div>
+        <div class="profile-row">
+          <span>Role:</span>
+          <strong>{{ profile.role }}</strong>
+        </div>
+        <button class="btn-edit" (click)="startEdit()">Edit Profile</button>
       </div>
-      <div class="profile-row">
-        <span>Username:</span>
-        <strong>{{ profile.username }}</strong>
+
+      <div *ngIf="isEditing" class="profile-edit">
+        <div class="form-group">
+          <label>First Name</label>
+          <input [(ngModel)]="editData.firstName" type="text" />
+        </div>
+        <div class="form-group">
+          <label>Middle Name</label>
+          <input [(ngModel)]="editData.middleName" type="text" />
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input [(ngModel)]="editData.lastName" type="text" />
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input [(ngModel)]="editData.email" type="email" />
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input [(ngModel)]="editData.phoneNumber" type="tel" />
+        </div>
+        <div class="form-actions">
+          <button class="btn-save" (click)="saveProfile()">Save</button>
+          <button class="btn-cancel" (click)="cancelEdit()">Cancel</button>
+        </div>
       </div>
-      <div class="profile-row">
-        <span>Email:</span>
-        <strong>{{ profile.email }}</strong>
-      </div>
-      <div class="profile-row">
-        <span>Role:</span>
-        <strong>{{ profile.role }}</strong>
-      </div>
-      <button class="btn-edit" (click)="startEdit()">Edit Profile</button>
+    </div>
+  </div>
+
+  <!-- ==================== ADDRESSES TAB ==================== -->
+  <div *ngIf="activeTab === 'addresses'">
+    <div class="section-header">
+      <h2>My Addresses</h2>
+      <button class="btn-primary" (click)="addNewAddress()">+ Add New Address</button>
     </div>
 
-    <div *ngIf="isEditing" class="profile-edit">
-      <div class="form-group">
-        <label>First Name</label>
-        <input [(ngModel)]="editData.firstName" type="text" />
-      </div>
-      <div class="form-group">
-        <label>Middle Name</label>
-        <input [(ngModel)]="editData.middleName" type="text" />
-      </div>
-      <div class="form-group">
-        <label>Last Name</label>
-        <input [(ngModel)]="editData.lastName" type="text" />
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input [(ngModel)]="editData.email" type="email" />
-      </div>
-      <div class="form-actions">
-        <button class="btn-save" (click)="saveProfile()">Save</button>
-        <button class="btn-cancel" (click)="cancelEdit()">Cancel</button>
+    <div *ngIf="isLoadingAddresses" class="loading-state">Loading addresses...</div>
+
+    <div *ngIf="!isLoadingAddresses && addresses.length === 0 && !isEditingAddress" class="empty-state">
+      <p>You haven't saved any delivery addresses yet.</p>
+      <button class="btn-primary" (click)="addNewAddress()">Add your first address</button>
+    </div>
+
+    <div *ngIf="!isLoadingAddresses && addresses.length > 0" class="address-grid">
+      <div *ngFor="let address of addresses" class="address-card" [class.is-default]="address.isDefault">
+        <span *ngIf="address.isDefault" class="default-badge">Default</span>
+        <h3>{{ address.label }}</h3>
+        <p>{{ address.line1 }}</p>
+        <p *ngIf="address.line2">{{ address.line2 }}</p>
+        <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+        <p *ngIf="address.landmark" class="landmark">Landmark: {{ address.landmark }}</p>
+
+        <div class="card-actions">
+          <button class="btn-link" (click)="editAddress(address)">Edit</button>
+          <button *ngIf="!address.isDefault" class="btn-link" (click)="markAddressDefault(address)">
+            Set as default
+          </button>
+          <button class="btn-link btn-danger" (click)="removeAddress(address)">Delete</button>
+        </div>
       </div>
     </div>
+
+    <div *ngIf="isEditingAddress" class="address-form-overlay">
+      <div class="address-form-panel">
+        <h2>{{ currentAddress.id ? 'Edit Address' : 'Add New Address' }}</h2>
+
+        <form (ngSubmit)="saveAddress()">
+          <div class="input-group">
+            <label>Label</label>
+            <input type="text" [(ngModel)]="currentAddress.label" name="label" placeholder="Home, Work, ..." required />
+          </div>
+
+          <div class="input-group">
+            <label>Address Line 1</label>
+            <input type="text" [(ngModel)]="currentAddress.line1" name="line1" required />
+          </div>
+
+          <div class="input-group">
+            <label>Address Line 2 (optional)</label>
+            <input type="text" [(ngModel)]="currentAddress.line2" name="line2" />
+          </div>
+
+          <div class="form-row-group">
+            <div class="input-group">
+              <label>City</label>
+              <input type="text" [(ngModel)]="currentAddress.city" name="city" required />
+            </div>
+            <div class="input-group">
+              <label>State</label>
+              <input type="text" [(ngModel)]="currentAddress.state" name="state" required />
+            </div>
+            <div class="input-group">
+              <label>Pincode</label>
+              <input type="text" [(ngModel)]="currentAddress.pincode" name="pincode" required />
+            </div>
+          </div>
+
+          <div class="input-group">
+            <label>Landmark (optional)</label>
+            <input type="text" [(ngModel)]="currentAddress.landmark" name="landmark" />
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-save" [disabled]="isSavingAddress">
+              {{ isSavingAddress ? 'Saving...' : 'Save Address' }}
+            </button>
+            <button type="button" class="btn-cancel" (click)="cancelAddressEdit()">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== NOTIFICATIONS TAB ==================== -->
+  <div *ngIf="activeTab === 'notifications'">
+    <div class="section-header">
+      <h2>Notifications</h2>
+      <button *ngIf="unreadCount > 0" class="btn-link" (click)="markAllNotificationsRead()">
+        Mark all as read
+      </button>
+    </div>
+
+    <div *ngIf="isLoadingNotifications" class="loading-state">Loading notifications...</div>
+
+    <div *ngIf="!isLoadingNotifications && notifications.length === 0" class="empty-state">
+      <p>You're all caught up - no notifications yet.</p>
+    </div>
+
+    <ul *ngIf="!isLoadingNotifications && notifications.length > 0" class="notification-list">
+      <li
+        *ngFor="let notification of notifications"
+        class="notification-row"
+        [class.unread]="!notification.read"
+        (click)="markNotificationRead(notification)"
+      >
+        <span class="notification-icon">{{ notificationIconFor(notification.type) }}</span>
+        <div class="notification-body">
+          <p class="notification-title">{{ notification.title }}</p>
+          <p *ngIf="notification.message" class="notification-message">{{ notification.message }}</p>
+          <p class="notification-date">{{ notification.createdAt | date: 'short' }}</p>
+        </div>
+        <button class="btn-icon-delete" (click)="removeNotification(notification); $event.stopPropagation()">
+          ✕
+        </button>
+      </li>
+    </ul>
   </div>
 </div>
