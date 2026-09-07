@@ -44,6 +44,26 @@ export class PaymentManagement implements OnInit {
     });
   }
 
+  get totalCollected(): number {
+    return this.allPayments
+      .filter((p) => p.status === 'SUCCESS')
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+  }
+
+  get pendingCodCount(): number {
+    return this.allPayments.filter((p) => p.method === 'COD' && p.status === 'PENDING').length;
+  }
+
+  get pendingCodAmount(): number {
+    return this.allPayments
+      .filter((p) => p.method === 'COD' && p.status === 'PENDING')
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+  }
+
+  get failedCount(): number {
+    return this.allPayments.filter((p) => p.status === 'FAILED').length;
+  }
+
   get filteredPayments(): PaymentTransactionDto[] {
     let payments = this.allPayments;
 
@@ -83,6 +103,25 @@ export class PaymentManagement implements OnInit {
       error: (err) => {
         console.error('Refund failed:', err);
         alert(err?.error?.message || 'Refund failed. Please try again.');
+      },
+    });
+  }
+
+  /** COD orders sit as PENDING forever unless an admin confirms cash was collected. */
+  markCollected(payment: PaymentTransactionDto): void {
+    if (payment.method !== 'COD' || payment.status !== 'PENDING') return;
+    if (!window.confirm(`Mark COD order #${payment.orderId} (₹${payment.amount}) as collected?`)) return;
+
+    this.paymentAdminService.markCodCollected(payment.id).subscribe({
+      next: (updated) => {
+        const idx = this.allPayments.findIndex((p) => p.id === payment.id);
+        if (idx !== -1) {
+          this.allPayments[idx] = { ...this.allPayments[idx], status: updated.status, paidAt: updated.paidAt };
+        }
+      },
+      error: (err) => {
+        console.error('Marking COD as collected failed:', err);
+        alert(err?.error?.message || 'Could not mark this order as collected. Please try again.');
       },
     });
   }

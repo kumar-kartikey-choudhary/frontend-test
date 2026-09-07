@@ -22,4 +22,9 @@ export class PaymentAdminService {
       reason,
     });
   }
+
+  /** Admin: confirm a COD transaction's cash was collected at delivery. */
+  markCodCollected(paymentId: string): Observable<PaymentTransactionDto> {
+    return this.http.post<PaymentTransactionDto>(`${this.apiUrl}/admin/${paymentId}/collect`, {});
+  }
 }

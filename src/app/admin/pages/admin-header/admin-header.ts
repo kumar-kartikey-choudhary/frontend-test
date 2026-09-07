@@ -14,6 +14,7 @@ export class AdminHeader {
     { label: 'Product Management', link: 'admin/product' },
     { label: 'User Management', link: 'admin/users' },
     { label: 'Order Management', link: 'admin/orders' },
+    { label: 'Payment Management', link: 'admin/payments' },
   ];
 
   constructor(

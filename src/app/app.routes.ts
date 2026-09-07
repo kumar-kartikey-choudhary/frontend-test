@@ -135,6 +135,14 @@ export const routes: Routes = [
           import('./admin/pages/order-management/order-management').then((m) => m.OrderManagement),
       },
       {
+        path: 'payments',
+        title: 'Payment Management | Pratik Dairy',
+        loadComponent: () =>
+          import('./admin/pages/payment-management/payment-management').then(
+            (m) => m.PaymentManagement,
+          ),
+      },
+      {
         path: 'users',
         title: 'User Management | Pratik Dairy',
         loadComponent: () =>

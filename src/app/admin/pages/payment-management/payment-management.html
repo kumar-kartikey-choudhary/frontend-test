@@ -1,69 +1,116 @@
 <div class="payment-management-container">
-  <div class="page-header">
-    <h1>Payment Transactions</h1>
-    <p>Every payment attempt, across all orders - COD entries show as PENDING until collected.</p>
-  </div>
+  <h1><span class="icon">💳</span> Payment Management</h1>
 
-  <div class="filter-controls">
-    <input
-      type="text"
-      placeholder="Search by order ID, transaction ID, or gateway payment ID..."
-      [(ngModel)]="searchTerm"
-      class="search-input"
-      name="search-term"
-    />
-    <select [(ngModel)]="selectedStatus" class="status-select" name="status-filter">
-      @for (status of statusOptions; track status) {
-        <option [value]="status">{{ status }}</option>
-      }
-    </select>
+  @if (!isLoading && !errorMsg) {
+    <div class="summary-cards">
+      <div class="summary-card">
+        <span class="summary-label">Total Collected</span>
+        <span class="summary-value success">₹ {{ totalCollected | number: '1.2-2' }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">COD Awaiting Collection</span>
+        <span class="summary-value warning">{{ pendingCodCount }} order(s)</span>
+        <span class="summary-sub">₹ {{ pendingCodAmount | number: '1.2-2' }} outstanding</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-label">Failed Payments</span>
+        <span class="summary-value danger">{{ failedCount }}</span>
+      </div>
+    </div>
+  }
+
+  <div class="controls-bar">
+    <div class="search-group">
+      <input
+        type="text"
+        placeholder="Search by order ID, transaction ID, or gateway payment ID..."
+        [(ngModel)]="searchTerm"
+        class="search-input"
+        name="search-term"
+      />
+      <span class="search-icon">🔍</span>
+    </div>
+
+    <div class="filter-group">
+      <label for="status-filter">Filter by Status:</label>
+      <select id="status-filter" [(ngModel)]="selectedStatus" class="status-select" name="status-filter">
+        @for (status of statusOptions; track status) {
+          <option [value]="status">{{ status }}</option>
+        }
+      </select>
+    </div>
   </div>
 
   @if (isLoading) {
-    <p>Loading payments...</p>
-  } @else if (errorMsg) {
-    <p class="error-msg">{{ errorMsg }}</p>
-  } @else {
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Transaction ID</th>
-            <th>Order ID</th>
-            <th>Method</th>
-            <th>Amount</th>
-            <th>Gateway Payment ID</th>
-            <th>Status</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (payment of filteredPayments; track payment.id) {
+    <p class="loading-message">Loading payments...</p>
+  }
+
+  @if (errorMsg) {
+    <div class="error-message-box">
+      <p>{{ errorMsg }}</p>
+      <button (click)="loadPayments()" class="btn-retry">Retry</button>
+    </div>
+  }
+
+  @if (!isLoading && !errorMsg) {
+    <div class="payment-table-panel panel">
+      <h2>Transactions ({{ selectedStatus }})</h2>
+
+      @if (filteredPayments.length > 0) {
+        <table class="data-table">
+          <thead>
             <tr>
-              <td class="mono">#{{ payment.id }}</td>
-              <td class="mono">#{{ payment.orderId }}</td>
-              <td>{{ payment.method }}</td>
-              <td>₹ {{ payment.amount | number: '1.2-2' }}</td>
-              <td class="mono">{{ payment.gatewayPaymentId || '—' }}</td>
-              <td>
-                <span [class]="'status-badge status-' + payment.status.toLowerCase()">
-                  {{ payment.status }}
-                </span>
-                @if (payment.status === 'FAILED' && payment.failureReason) {
-                  <span class="failure-reason" [title]="payment.failureReason">ⓘ</span>
-                }
-              </td>
-              <td>{{ payment.createdAt | date: 'short' }}</td>
-              <td>
-                @if (payment.status === 'SUCCESS') {
-                  <button class="btn-action" (click)="refund(payment)">Refund</button>
-                }
-              </td>
+              <th>Transaction ID</th>
+              <th>Order ID</th>
+              <th>Method</th>
+              <th>Amount</th>
+              <th>Gateway Payment ID</th>
+              <th>Status</th>
+              <th>Date</th>
+              <th>Actions</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (payment of filteredPayments; track payment.id) {
+              <tr>
+                <td class="mono">#{{ payment.id }}</td>
+                <td class="mono order-id">#{{ payment.orderId }}</td>
+                <td>
+                  <span class="method-badge" [class.method-cod]="payment.method === 'COD'">
+                    {{ payment.method }}
+                  </span>
+                </td>
+                <td class="total-col">₹ {{ payment.amount | number: '1.2-2' }}</td>
+                <td class="mono">{{ payment.gatewayPaymentId || '—' }}</td>
+                <td>
+                  <span [class]="'status-badge status-' + payment.status.toLowerCase()">
+                    {{ payment.status }}
+                  </span>
+                  @if (payment.status === 'FAILED' && payment.failureReason) {
+                    <span class="failure-reason" [title]="payment.failureReason">ⓘ</span>
+                  }
+                </td>
+                <td>{{ payment.createdAt | date: 'short' }}</td>
+                <td>
+                  @if (payment.method === 'COD' && payment.status === 'PENDING') {
+                    <button class="btn-action btn-collect" (click)="markCollected(payment)">
+                      Mark Collected
+                    </button>
+                  }
+                  @if (payment.status === 'SUCCESS') {
+                    <button class="btn-action" (click)="refund(payment)">Refund</button>
+                  }
+                  @if (!(payment.method === 'COD' && payment.status === 'PENDING') && payment.status !== 'SUCCESS') {
+                    <span class="no-action">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="no-payments-message">No payments found matching the current filters.</p>
+      }
     </div>
   }
 </div>
