@@ -10,6 +10,7 @@ import {
   defaultWeightFor,
   priceForWeight,
 } from '../../shared/uti/weight-pricing.util';
+import { isOutOfStock } from '../../shared/uti/stock.util';
 
 interface SweetCategory {
   name: string;
@@ -120,5 +121,9 @@ export class SweetsMenu implements OnInit {
 
   addToCart(product: Product): void {
     this.cartService.addToCart(product.id, this.getSelectedWeight(product));
+  }
+
+  outOfStock(product: Product): boolean {
+    return isOutOfStock(product);
   }
 }

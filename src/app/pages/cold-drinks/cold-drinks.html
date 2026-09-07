@@ -12,13 +12,8 @@
 
   <section class="search-section">
     <div class="search-input-wrapper">
-      <input
-        type="text"
-        placeholder="Search Coke, Sprite, or Fanta..."
-        [(ngModel)]="filterText"
-        class="search-input"
-        aria-label="Search Cold Drinks Menu"
-      />
+      <input type="text" placeholder="Search Coke, Sprite, or Fanta..." [(ngModel)]="filterText" class="search-input"
+        aria-label="Search Cold Drinks Menu" />
       <span class="search-icon">🔍</span>
     </div>
   </section>
@@ -26,9 +21,9 @@
   <section class="menu-listing-section">
     <h2>
       @if (filterText) {
-        Filtered Drink Results
+      Filtered Drink Results
       } @else {
-        All Soft Drinks & Essentials
+      All Soft Drinks & Essentials
       }
     </h2>
 
@@ -36,58 +31,56 @@
 
     <div class="menu-grid" *ngIf="!isLoading">
       @for (drink of filteredProducts; track drink.id) {
-        <div class="drink-card">
-          <div class="image-box">
-            <img [src]="imageUrlFor(drink)" [alt]="drink.productName" class="drink-image" />
+      <div class="drink-card">
+        <div class="image-box" [class.out-of-stock]="outOfStock(drink)">
+          <img [src]="imageUrlFor(drink)" [alt]="drink.productName" class="drink-image" />
+          @if (outOfStock(drink)) {
+          <div class="out-of-stock-overlay">
+            <span>Out of Stock</span>
           </div>
-
-          <div class="card-details">
-            <div class="name-price">
-              <h3>{{ drink.productName }}</h3>
-              <span class="price-tag">₹{{ priceFor(drink) }} / {{ getSelectedWeight(drink) }}</span>
-            </div>
-
-            <p class="description">{{ drink.description }}</p>
-
-            <div class="weight-options">
-              @for (weight of weightOptions; track weight) {
-                <button
-                  type="button"
-                  class="weight-pill"
-                  [class.active]="getSelectedWeight(drink) === weight"
-                  (click)="selectWeight(drink, weight)"
-                >
-                  {{ weight }}
-                </button>
-              }
-            </div>
-
-            @if (!cartService.isInCart(drink.id)) {
-              <button
-                class="btn-order"
-                [disabled]="cartService.isLoading(drink.id)"
-                (click)="addToCart(drink)"
-              >
-                {{ cartService.isLoading(drink.id) ? 'Adding...' : 'Add to Cart' }}
-              </button>
-            }
-            @if (cartService.isInCart(drink.id)) {
-              <div class="quantity-controls">
-                <button class="qty-btn" (click)="cartService.decrement(drink.id)">−</button>
-                <span class="qty-display">{{ cartService.getQuantity(drink.id) }}</span>
-                <button class="qty-btn" (click)="cartService.increment(drink.id)">+</button>
-              </div>
-            }
-          </div>
+          }
         </div>
+
+        <div class="card-details">
+          <div class="name-price">
+            <h3>{{ drink.productName }}</h3>
+            <span class="price-tag">₹{{ priceFor(drink) }} / {{ getSelectedWeight(drink) }}</span>
+          </div>
+
+          <p class="description">{{ drink.description }}</p>
+
+          <div class="weight-options">
+            @for (weight of weightOptions; track weight) {
+            <button type="button" class="weight-pill" [class.active]="getSelectedWeight(drink) === weight"
+              [disabled]="outOfStock(drink)" (click)="selectWeight(drink, weight)">
+              {{ weight }}
+            </button>
+            }
+          </div>
+
+          @if (outOfStock(drink)) {
+          <button class="btn-order" disabled>Out of Stock</button>
+          } @else if (!cartService.isInCart(drink.id)) {
+          <button class="btn-order" [disabled]="cartService.isLoading(drink.id)" (click)="addToCart(drink)">
+            {{ cartService.isLoading(drink.id) ? 'Adding...' : 'Add to Cart' }}
+          </button>
+          } @else {
+          <div class="quantity-controls">
+            <button class="qty-btn" (click)="cartService.decrement(drink.id)">−</button>
+            <span class="qty-display">{{ cartService.getQuantity(drink.id) }}</span>
+            <button class="qty-btn" (click)="cartService.increment(drink.id)">+</button>
+          </div>
+          }
+        </div>
+      </div>
       }
     </div>
 
     @if (!isLoading && filteredProducts.length === 0 && filterText) {
-      <div class="no-results">
-        <p>😔 No drinks found matching "{{ filterText }}". Please try a different item.</p>
-        <button class="btn-clear-filter" (click)="filterText = ''">Clear Search</button>
-      </div>
+    <div class="no-results">
+      <p>😔 No drinks found matching "{{ filterText }}". Please try a different item.</p>
+      <button class="btn-clear-filter" (click)="filterText = ''">Clear Search</button>
+    </div>
     }
   </section>
 

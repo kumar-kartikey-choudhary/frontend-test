@@ -41,9 +41,15 @@
           <div class="menu-grid">
             @for (sweet of category.items; track sweet.id) {
               <div class="sweet-card">
-                <div class="image-box">
+                <div class="image-box" [class.out-of-stock]="outOfStock(sweet)">
                   <img [src]="imageUrlFor(sweet)" [alt]="sweet.productName" class="sweet-image" />
                   <span class="category-tag">{{ sweet.category }}</span>
+
+                  @if (outOfStock(sweet)) {
+                    <div class="out-of-stock-overlay">
+                      <span>Out of Stock</span>
+                    </div>
+                  }
                 </div>
 
                 <div class="card-details">
@@ -57,6 +63,7 @@
                         type="button"
                         class="weight-pill"
                         [class.active]="getSelectedWeight(sweet) === weight"
+                        [disabled]="outOfStock(sweet)"
                         (click)="selectWeight(sweet, weight)"
                       >
                         {{ weight }}
@@ -67,7 +74,9 @@
                   <div class="price-actions">
                     <span class="price-tag">₹{{ priceFor(sweet) }} / {{ getSelectedWeight(sweet) }}</span>
 
-                    @if (!cartService.isInCart(sweet.id)) {
+                    @if (outOfStock(sweet)) {
+                      <button class="btn-add-to-cart" disabled>Out of Stock</button>
+                    } @else if (!cartService.isInCart(sweet.id)) {
                       <button
                         class="btn-add-to-cart"
                         [disabled]="cartService.isLoading(sweet.id)"
@@ -75,8 +84,7 @@
                       >
                         🛒 Add to Cart
                       </button>
-                    }
-                    @if (cartService.isInCart(sweet.id)) {
+                    } @else {
                       <div class="quantity-controls">
                         <button class="qty-btn" (click)="cartService.decrement(sweet.id)">−</button>
                         <span class="qty-display">{{ cartService.getQuantity(sweet.id) }}</span>
