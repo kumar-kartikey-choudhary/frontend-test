@@ -169,7 +169,7 @@
     font-size: 0.85em;
     font-weight: 700;
     text-transform: uppercase;
-    color: white;
+    color: rgb(5, 241, 5);
 }
 .status-created { background-color: var(--accent-info); }
 .status-pending { background-color: var(--accent-warning); color: #4a3b00; }

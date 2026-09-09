@@ -1,157 +1,167 @@
 <main class="signup-page-container">
+  <!-- Decorative background elements -->
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+  <div class="glow-orb orb-3"></div>
+
   <div class="signup-card">
     <div class="card-header">
+      <div class="brand-badge">
+        <span class="badge-icon">🥛</span>
+        <span>Pratik Dairy & Sweets</span>
+      </div>
       <h1>Create Your Account</h1>
-      <p>Join Pratik Dairy & Sweets to enjoy fresh products delivered to your door!</p>
+      <p>Sign up to get fresh dairy products & traditional sweets delivered directly to your doorstep.</p>
     </div>
 
     <form (ngSubmit)="onSubmit()" #signupForm="ngForm" class="signup-form">
-      <div class="form-row">
+      <!-- 3-Column Names -->
+      <div class="form-grid grid-3">
         <div class="input-group">
-          <label for="firstName">First Name</label>
+          <label for="firstName">First Name <span class="req">*</span></label>
           <input
             type="text"
             id="firstName"
             name="firstName"
+            placeholder="John"
             [(ngModel)]="user.firstName"
             required
             #firstNameField="ngModel"
+            [class.is-invalid]="firstNameField.invalid && (firstNameField.dirty || firstNameField.touched)"
           />
-          <div
-            *ngIf="firstNameField.invalid && (firstNameField.dirty || firstNameField.touched)"
-            class="error-message"
-          >
-            First Name is required.
+          <div *ngIf="firstNameField.invalid && (firstNameField.dirty || firstNameField.touched)" class="error-text">
+            Required
           </div>
         </div>
 
         <div class="input-group">
-          <label for="middleName">Middle Name (Optional)</label>
-          <input type="text" id="middleName" name="middleName" [(ngModel)]="user.middleName" />
+          <label for="middleName">Middle Name</label>
+          <input
+            type="text"
+            id="middleName"
+            name="middleName"
+            placeholder="Kumar"
+            [(ngModel)]="user.middleName"
+          />
         </div>
 
         <div class="input-group">
-          <label for="lastName">Last Name</label>
+          <label for="lastName">Last Name <span class="req">*</span></label>
           <input
             type="text"
             id="lastName"
             name="lastName"
+            placeholder="Doe"
             [(ngModel)]="user.lastName"
             required
             #lastNameField="ngModel"
+            [class.is-invalid]="lastNameField.invalid && (lastNameField.dirty || lastNameField.touched)"
           />
-          <div
-            *ngIf="lastNameField.invalid && (lastNameField.dirty || lastNameField.touched)"
-            class="error-message"
-          >
-            Last Name is required.
+          <div *ngIf="lastNameField.invalid && (lastNameField.dirty || lastNameField.touched)" class="error-text">
+            Required
           </div>
         </div>
       </div>
 
-      <div class="form-row">
-        <div class="input-group full-width">
-          <label for="username">Username</label>
+      <!-- 2-Column Username & Phone -->
+      <div class="form-grid grid-2">
+        <div class="input-group">
+          <label for="username">Username <span class="req">*</span></label>
           <input
             type="text"
             id="username"
             name="username"
+            placeholder="johndoe"
             [(ngModel)]="user.username"
             required
             #usernameField="ngModel"
+            [class.is-invalid]="usernameField.invalid && (usernameField.dirty || usernameField.touched)"
           />
-          <div
-            *ngIf="usernameField.invalid && (usernameField.dirty || usernameField.touched)"
-            class="error-message"
-          >
-            Username is required.
+          <div *ngIf="usernameField.invalid && (usernameField.dirty || usernameField.touched)" class="error-text">
+            Username required
           </div>
         </div>
-      </div>
 
-      <div class="form-row">
-        <div class="input-group full-width">
-          <label for="email">Email</label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            [(ngModel)]="user.email"
-            required
-            email
-            #emailField="ngModel"
-          />
-          <div
-            *ngIf="emailField.invalid && (emailField.dirty || emailField.touched)"
-            class="error-message"
-          >
-            Please enter a valid email.
-          </div>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="input-group full-width">
+        <div class="input-group">
           <label for="phoneNumber">Phone Number</label>
           <input
             type="tel"
             id="phoneNumber"
             name="phoneNumber"
             [(ngModel)]="user.phoneNumber"
-            placeholder="For delivery updates"
+            placeholder="9876543210"
           />
         </div>
       </div>
 
-      <div class="form-row">
+      <!-- Email Address -->
+      <div class="input-group">
+        <label for="email">Email Address <span class="req">*</span></label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          placeholder="john@example.com"
+          [(ngModel)]="user.email"
+          required
+          email
+          #emailField="ngModel"
+          [class.is-invalid]="emailField.invalid && (emailField.dirty || emailField.touched)"
+        />
+        <div *ngIf="emailField.invalid && (emailField.dirty || emailField.touched)" class="error-text">
+          Enter a valid email address
+        </div>
+      </div>
+
+      <!-- 2-Column Passwords -->
+      <div class="form-grid grid-2">
         <div class="input-group">
-          <label for="password">Password</label>
+          <label for="password">Password <span class="req">*</span></label>
           <input
             type="password"
             id="password"
             name="password"
+            placeholder="Min 8 characters"
             [(ngModel)]="user.password"
             required
             minlength="8"
             #passwordField="ngModel"
-            [class.is-invalid]="
-              passwordField.invalid && (passwordField.dirty || passwordField.touched)
-            "
+            [class.is-invalid]="passwordField.invalid && (passwordField.dirty || passwordField.touched)"
           />
-          <div
-            *ngIf="passwordField.invalid && (passwordField.dirty || passwordField.touched)"
-            class="error-message"
-          >
-            Password must be at least 8 characters.
+          <div *ngIf="passwordField.invalid && (passwordField.dirty || passwordField.touched)" class="error-text">
+            Min 8 characters
           </div>
         </div>
 
         <div class="input-group">
-          <label for="confirmPassword">Confirm Password</label>
+          <label for="confirmPassword">Confirm Password <span class="req">*</span></label>
           <input
             type="password"
             id="confirmPassword"
             name="confirmPassword"
+            placeholder="Re-enter password"
             [(ngModel)]="user.confirmPassword"
             required
-            [class.is-invalid]="
-              passwordMismatch && (signupForm.submitted || confirmPasswordField.touched)
-            "
             #confirmPasswordField="ngModel"
+            [class.is-invalid]="passwordMismatch && (signupForm.submitted || confirmPasswordField.touched)"
           />
-          <div *ngIf="passwordMismatch" class="error-message">Passwords do not match.</div>
+          <div *ngIf="passwordMismatch" class="error-text">
+            Passwords do not match
+          </div>
         </div>
       </div>
 
-      <!-- <input type="hidden" name="role" [(ngModel)]="user.role"> -->
-
-      <button type="submit" [disabled]="!signupForm.valid" class="btn btn-primary">
-        Register Account
+      <!-- Action Button -->
+      <button type="submit" [disabled]="!signupForm.valid" class="btn-submit">
+        <span>Complete Registration</span>
+        <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+        </svg>
       </button>
 
-      <p class="login-link-text">
-        Already have an account? <a routerLink="/login" class="login-link">Login Here</a>
-      </p>
+      <div class="login-footer">
+        Already have an account? <a routerLink="/login">Sign in</a>
+      </div>
     </form>
   </div>
 </main>
