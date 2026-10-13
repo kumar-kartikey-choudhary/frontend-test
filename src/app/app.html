@@ -2,19 +2,22 @@
 
 <a class="skip-link" href="#main-content">Skip to main content</a>
 
-@if (showAdminHeader()) {
-  <app-admin-header />
-}
-@if (showCustomerHeader()) {
-  <app-header />
-}
+<div class="app-root" [class.adm-shell]="showAdminHeader()">
+  @if (showAdminHeader()) {
+    <app-admin-header />
+  }
+  @if (showCustomerHeader()) {
+    <app-header />
+  }
 
-<main id="main-content" tabindex="-1">
-  <router-outlet />
-</main>
+  <main id="main-content" tabindex="-1" [class.adm-main]="showAdminHeader()">
+    <router-outlet />
+  </main>
 
-@if (showFooter()) {
-  <app-footer />
-}
+  @if (showFooter()) {
+    <app-footer />
+  }
+</div>
 
 <app-toast-host />
+<app-confirm-dialog />

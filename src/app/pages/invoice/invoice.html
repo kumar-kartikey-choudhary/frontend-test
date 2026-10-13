@@ -1,0 +1,104 @@
+<div class="wrap">
+  @if (loading()) {
+    <p class="state" aria-busy="true">Loading your invoice…</p>
+  } @else if (failed() === 'missing') {
+    <div class="state">
+      <h1>We couldn't find that order</h1>
+      <a routerLink="/orders" class="link">Back to my orders</a>
+    </div>
+  } @else if (failed()) {
+    <div class="state" role="alert">
+      <h1>Something went wrong</h1>
+      <p>We couldn't load this invoice right now.</p>
+      <a routerLink="/orders" class="link">Back to my orders</a>
+    </div>
+  } @else if (order(); as o) {
+    <div class="toolbar no-print">
+      <a routerLink="/orders" class="link">← Back to my orders</a>
+      <button type="button" class="print-btn" (click)="print()">Print / Save as PDF</button>
+    </div>
+
+    <article class="invoice" aria-label="Invoice">
+      @if (cancelled()) {
+        <p class="stamp" role="status">Cancelled</p>
+      }
+
+      <header class="head">
+        <div>
+          <h1>{{ shop.name }}</h1>
+          @for (line of shop.addressLines; track line) {
+            <p>{{ line }}</p>
+          }
+          <p>{{ phone }} · {{ shop.email }}</p>
+        </div>
+        <div class="meta">
+          <h2>Invoice</h2>
+          <p><span>No.</span> #{{ invoiceNumber() }}</p>
+          <p><span>Date</span> {{ o.orderDateTime | date: 'mediumDate' }}</p>
+          <p><span>Status</span> {{ o.status }}</p>
+        </div>
+      </header>
+
+      <section class="parties">
+        <div>
+          <h3>Billed to</h3>
+          <p>{{ o.username }}</p>
+        </div>
+        @if (o.deliveryAddress; as a) {
+          <div>
+            <h3>Delivered to</h3>
+            <p>
+              {{ a.line1 }}@if (a.line2) {, {{ a.line2 }}}<br />
+              {{ a.city }}, {{ a.state }} - {{ a.pincode }}
+              @if (a.landmark) {<br />Landmark: {{ a.landmark }}}
+              @if (a.contactPhone) {<br />Phone: {{ a.contactPhone }}}
+            </p>
+          </div>
+        }
+        <div>
+          <h3>Payment</h3>
+          <p>{{ paymentText() }}</p>
+          @if (payment()?.paidAt; as paidAt) {
+            <p class="muted">on {{ paidAt | date: 'medium' }}</p>
+          }
+        </div>
+      </section>
+
+      <table class="lines">
+        <thead>
+          <tr>
+            <th scope="col">Item</th>
+            <th scope="col">Pack</th>
+            <th scope="col" class="num">Qty</th>
+            <th scope="col" class="num">Price</th>
+            <th scope="col" class="num">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of o.items; track item.id) {
+            <tr>
+              <td>{{ item.productName ?? 'Item' }}</td>
+              <td>{{ item.weight ?? '—' }}</td>
+              <td class="num">{{ item.quantity }}</td>
+              <td class="num">{{ item.price | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
+              <td class="num">{{ item.subTotal | currency: 'INR' : 'symbol' : '1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+
+      <dl class="totals">
+        <div><dt>Subtotal</dt><dd>{{ o.subtotalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</dd></div>
+        @if (o.discountAmount > 0) {
+          <div>
+            <dt>Discount @if (o.couponCode) {<span class="muted">({{ o.couponCode }})</span>}</dt>
+            <dd>− {{ o.discountAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</dd>
+          </div>
+        }
+        <div class="grand"><dt>Total</dt><dd>{{ o.totalAmount | currency: 'INR' : 'symbol' : '1.2-2' }}</dd></div>
+      </dl>
+
+      <p class="thanks">Thank you for shopping with {{ shop.name }}.</p>
+    </article>
+  }
+</div>

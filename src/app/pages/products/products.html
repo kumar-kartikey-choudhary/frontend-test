@@ -1,4 +1,4 @@
-<main class="products-page-container">
+<div class="products-page-container">
   <section class="page-header-banner">
     <div class="header-overlay"></div>
     <div class="header-content">
@@ -14,10 +14,16 @@
       @for (category of categories; track category.name) {
         <a [routerLink]="category.link" class="category-card">
           <div class="card-image-wrapper">
-            <div
-              class="card-image"
-              [style.background-image]="'url(' + category.imagePath + ')'"
-            ></div>
+            @if (category.imagePath) {
+              <div
+                class="card-image"
+                role="img"
+                [attr.aria-label]="category.name"
+                [style.background-image]="'url(' + category.imagePath + ')'"
+              ></div>
+            } @else {
+              <div class="card-image card-image--emoji" aria-hidden="true">{{ category.emoji }}</div>
+            }
           </div>
 
           <div class="card-body">
@@ -35,4 +41,4 @@
     <p>Get in touch for bulk orders, customization, or seasonal specials.</p>
     <a routerLink="/contact" class="btn btn-primary">Contact Us Now</a>
   </section>
-</main>
+</div>

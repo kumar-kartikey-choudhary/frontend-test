@@ -1,135 +1,156 @@
 import { environment } from '../../../environments/environment';
-import { Injectable } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, finalize, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from '../login/auth-service';
 import type { CartItemDto, AddToCart } from '../../model/cart.model';
-import type { OrderResponse } from '../../model/order.model';
+import type { OrderResponse, DeliveryAddress } from '../../model/order.model';
 
 export type { CartItemDto, AddToCart };
 
 @Injectable({ providedIn: 'root' })
 export class CartService {
-  private cartUrl = `${environment.apiBaseUrl}/carts`;
-  private orderUrl = `${environment.apiBaseUrl}/orders`;
+  private readonly http = inject(HttpClient);
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
-  // Global cart quantity state, keyed by productId. The weight variant is chosen once,
-  // at add-to-cart time (see addToCart below), and the backend remembers it against the
-  // cart line - quantity +/- afterwards doesn't change which weight was selected.
-  private cartStateSubject = new BehaviorSubject<{ [productId: string]: number }>({});
-  cartState$ = this.cartStateSubject.asObservable();
+  private readonly cartUrl = `${environment.apiBaseUrl}/carts`;
+  private readonly orderUrl = `${environment.apiBaseUrl}/orders`;
 
-  // Global loading state - one flag per product.
-  private loadingStateSubject = new BehaviorSubject<{ [productId: string]: boolean }>({});
-  loadingState$ = this.loadingStateSubject.asObservable();
+  // Packs in the cart per line. A line is one product at one pack size, so the same product can
+  // appear several times (e.g. 2 x 250g and 1 x 1kg) - see lineKey().
+  private readonly lines = signal<Record<string, number>>({});
+  // One in-flight flag per line, so a card can disable its own buttons while saving.
+  private readonly busy = signal<Record<string, boolean>>({});
 
-  constructor(
-    private http: HttpClient,
-    private authService: AuthService,
-    private router: Router,
-  ) {}
+  /** Total packages in the cart - drives the badge in the header. */
+  readonly itemCount = computed(() => Object.values(this.lines()).reduce((sum, qty) => sum + qty, 0));
 
-  // ---------- Login Guard ----------
+  /** Identifies a cart line: the same product at a different pack size is a different line. */
+  private lineKey(productId: string, weight: string): string {
+    return `${productId}|${(weight ?? '').trim().toLowerCase()}`;
+  }
+
+  // ---------- Login guard ----------
   private requireLogin(): boolean {
     if (!this.authService.isLoggedIn()) {
-      this.router.navigate(['/login']);
+      this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       return false;
     }
     return true;
   }
 
   // ---------- Internal state setters ----------
-  private setLoading(productId: string, value: boolean): void {
-    this.loadingStateSubject.next({ ...this.loadingStateSubject.value, [productId]: value });
+  private setBusy(key: string, value: boolean): void {
+    this.busy.update((current) => ({ ...current, [key]: value }));
   }
 
-  private setCartQty(productId: string, qty: number): void {
-    const current = { ...this.cartStateSubject.value };
-    if (qty <= 0) {
-      delete current[productId];
-    } else {
-      current[productId] = qty;
-    }
-    this.cartStateSubject.next(current);
+  private setQty(key: string, qty: number): void {
+    this.lines.update((current) => {
+      const next = { ...current };
+      if (qty <= 0) {
+        delete next[key];
+      } else {
+        next[key] = qty;
+      }
+      return next;
+    });
   }
 
   // ---------- Backend sync ----------
   syncCartFromBackend(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.reset();
+      return;
+    }
     this.getCart().subscribe({
       next: (items) => {
-        const state: { [productId: string]: number } = {};
-        items.forEach((item) => (state[item.productId] = item.quantity));
-        this.cartStateSubject.next(state);
+        const state: Record<string, number> = {};
+        items.forEach((item) => (state[this.lineKey(item.productId, item.weight)] = item.quantity));
+        this.lines.set(state);
       },
-      error: (err) => console.error('Could not load cart:', err),
+      error: () => {
+        /* the error interceptor already told the user */
+      },
     });
   }
 
-  // ---------- Global cart actions (used directly by components) ----------
+  /** Forget everything held locally - called on logout. */
+  reset(): void {
+    this.lines.set({});
+    this.busy.set({});
+  }
+
+  // ---------- Actions used directly by components ----------
 
   /**
    * Add to cart - login check + API call + state update, all in one place.
-   * `weight` is the selected weight variant (e.g. "250g", "500g", "1kg"); the backend
-   * uses it to (re)calculate pricePerUnit against the product's base price/unit - see
-   * WeightPricing.priceFor() in cart-service.
+   * `weight` is the selected pack size (e.g. "250g", "500g", "1kg"). Adding a pack size that is
+   * already in the cart adds to that line; a different pack size becomes its own line.
    */
-  addToCart(productId: string, weight: string, quantity: number = 1): void {
+  addToCart(productId: string, weight: string, quantity = 1): void {
     if (!this.requireLogin()) return;
 
-    this.setLoading(productId, true);
-    this.addItemToCart(productId, weight, quantity).subscribe({
-      next: () => {
-        this.setCartQty(productId, quantity);
-        this.setLoading(productId, false);
-      },
-      error: (err) => {
-        console.error('Add to cart failed:', err);
-        this.setLoading(productId, false);
-      },
+    const key = this.lineKey(productId, weight);
+    this.setBusy(key, true);
+    this.addItemToCart(productId, weight, quantity)
+      .pipe(finalize(() => this.setBusy(key, false)))
+      .subscribe({
+        next: (line) => this.setQty(key, line?.quantity ?? this.getQuantity(productId, weight) + quantity),
+        error: () => {
+          /* e.g. 409 "only 2 kg available" - shown by the error interceptor */
+        },
+      });
+  }
+
+  increment(productId: string, weight: string): void {
+    this.changeQuantity(productId, weight, this.getQuantity(productId, weight) + 1);
+  }
+
+  decrement(productId: string, weight: string): void {
+    this.changeQuantity(productId, weight, this.getQuantity(productId, weight) - 1);
+  }
+
+  private changeQuantity(productId: string, weight: string, newQty: number): void {
+    if (!this.requireLogin()) return;
+
+    const key = this.lineKey(productId, weight);
+    this.setBusy(key, true);
+    const request$: Observable<unknown> =
+      newQty <= 0 ? this.removeItem(productId, weight) : this.updateQuantity(productId, weight, newQty);
+    request$.pipe(finalize(() => this.setBusy(key, false))).subscribe({
+      next: () => this.setQty(key, newQty),
+      error: () => {},
     });
   }
 
-  /** Quantity +1 */
-  increment(productId: string): void {
-    if (!this.requireLogin()) return;
-    const newQty = (this.cartStateSubject.value[productId] || 0) + 1;
-    this.updateQuantity(productId, newQty).subscribe({
-      next: () => this.setCartQty(productId, newQty),
-      error: (err) => console.error('Update failed:', err),
-    });
+  /** Lets a page that already holds fresh cart data (e.g. the cart page) keep the header badge in step. */
+  setLocalQuantity(productId: string, weight: string, quantity: number): void {
+    this.setQty(this.lineKey(productId, weight), quantity);
   }
 
-  /** Quantity -1, removes the line at 0 */
-  decrement(productId: string): void {
-    if (!this.requireLogin()) return;
-    const newQty = (this.cartStateSubject.value[productId] || 0) - 1;
-    if (newQty <= 0) {
-      this.removeItem(productId).subscribe({
-        next: () => this.setCartQty(productId, 0),
-        error: (err) => console.error('Remove failed:', err),
-      });
-    } else {
-      this.updateQuantity(productId, newQty).subscribe({
-        next: () => this.setCartQty(productId, newQty),
-        error: (err) => console.error('Update failed:', err),
-      });
-    }
+  /** The pack sizes of one product currently in the cart, e.g. [{ weight: '250g', quantity: 2 }, ...]. */
+  linesOf(productId: string): { weight: string; quantity: number }[] {
+    const prefix = `${productId}|`;
+    return Object.entries(this.lines())
+      .filter(([key, qty]) => key.startsWith(prefix) && qty > 0)
+      .map(([key, quantity]) => ({ weight: key.slice(prefix.length), quantity }));
   }
 
-  isInCart(productId: string): boolean {
-    return (this.cartStateSubject.value[productId] || 0) > 0;
+  isInCart(productId: string, weight?: string): boolean {
+    return weight === undefined ? this.linesOf(productId).length > 0 : this.getQuantity(productId, weight) > 0;
   }
 
-  getQuantity(productId: string): number {
-    return this.cartStateSubject.value[productId] || 0;
+  getQuantity(productId: string, weight: string): number {
+    return this.lines()[this.lineKey(productId, weight)] || 0;
   }
 
-  isLoading(productId: string): boolean {
-    return this.loadingStateSubject.value[productId] || false;
+  isLoading(productId: string, weight: string): boolean {
+    return this.busy()[this.lineKey(productId, weight)] || false;
   }
 
-  // ---------- Raw API calls (payment.ts uses getCart()/placeOrder() directly) ----------
+  // ---------- Raw API calls ----------
 
   getCart(): Observable<CartItemDto[]> {
     return this.http.get<CartItemDto[]>(this.cartUrl);
@@ -140,28 +161,44 @@ export class CartService {
     return this.http.post<CartItemDto>(`${this.cartUrl}/items`, payload);
   }
 
-  updateQuantity(productId: string, newQty: number): Observable<CartItemDto> {
-    return this.http.patch<CartItemDto>(`${this.cartUrl}/items/${productId}?quantity=${newQty}`, {});
+  updateQuantity(productId: string, weight: string, newQty: number): Observable<CartItemDto> {
+    return this.http.patch<CartItemDto>(
+      `${this.cartUrl}/items/${productId}`,
+      {},
+      { params: { quantity: String(newQty), weight } },
+    );
   }
 
-  removeItem(productId: string): Observable<void> {
-    return this.http.delete<void>(`${this.cartUrl}/items/${productId}`);
+  /** Empties the whole cart in one call. */
+  clearCart(): Observable<void> {
+    return this.http.delete<void>(`${this.cartUrl}/clear`).pipe(tap(() => this.reset()));
+  }
+
+  /** Removes one pack size of a product, or - with no weight - every line of it. */
+  removeItem(productId: string, weight?: string): Observable<void> {
+    return this.http
+      .delete<void>(`${this.cartUrl}/items/${productId}`, { params: weight ? { weight } : {} })
+      .pipe(
+        tap(() => {
+          if (weight) {
+            this.setQty(this.lineKey(productId, weight), 0);
+          } else {
+            this.linesOf(productId).forEach((line) => this.setQty(this.lineKey(productId, line.weight), 0));
+          }
+        }),
+      );
   }
 
   /**
    * Creates the order (stock reserved, order-service is the source of truth from here).
-   * Called from the Payment page (Payment.placeOrder()) after the customer picks a payment
-   * method - the cart page itself only reviews items and hands off via router navigation to
-   * /payment, it no longer calls this. couponCode is optional; omit it to skip the discount.
+   * Called from the Payment page after the customer picks an address and payment method.
+   * couponCode is optional; omit it to skip the discount. deliveryAddress is required by the
+   * backend for new orders.
    */
-  placeOrder(couponCode?: string): Observable<OrderResponse> {
-    // Must be explicitly typed (not inferred from a ternary) - an inferred union type like
-    // `{couponCode: string} | {}` makes TypeScript unable to match HttpClient's post<T>()
-    // overload for `params`, and it silently falls back to a completely different overload
-    // (the raw responseType: 'arraybuffer' one) - hence the confusing "Observable<ArrayBuffer>
-    // is not assignable to Observable<OrderResponse>" error. Same fix already applied in
-    // order-admin-service.ts.
+  placeOrder(couponCode: string | undefined, deliveryAddress: DeliveryAddress): Observable<OrderResponse> {
+    // Typed explicitly: an inferred union type makes HttpClient's post<T>() overload resolution
+    // silently fall back to the arraybuffer overload.
     const params: Record<string, string> = couponCode ? { couponCode } : {};
-    return this.http.post<OrderResponse>(`${this.orderUrl}/create`, {}, { params });
+    return this.http.post<OrderResponse>(`${this.orderUrl}/create`, deliveryAddress, { params });
   }
 }

@@ -6,12 +6,9 @@ import type {
   OrderResponse,
   OrderStatus,
   OrderItemDto,
-  PaymentDto,
-  PaymentMethod,
-  PaymentStatus,
 } from '../../model';
 
-export type { OrderResponse, OrderStatus, OrderItemDto, PaymentDto, PaymentMethod, PaymentStatus };
+export type { OrderResponse, OrderStatus, OrderItemDto };
 
 @Injectable({
   providedIn: 'root',
@@ -39,21 +36,5 @@ export class OrderAdminService {
   /** Admin: delete an order. */
   deleteOrder(orderId: string): Observable<void> {
     return this.http.delete<void>(`${this.API_URL}/admin/delete/${orderId}`);
-  }
-
-  /** Admin: manual payment entry - COD reconciliation or recording a gateway callback.
-   *  Every call appends a Payment row rather than overwriting, so retries/refunds stay visible. */
-  recordPayment(
-    orderId: string,
-    method: PaymentMethod,
-    amount: number,
-    status: PaymentStatus,
-    transactionId?: string,
-  ): Observable<PaymentDto> {
-    const params: Record<string, string> = { method, amount: String(amount), status };
-    if (transactionId) {
-      params['transactionId'] = transactionId;
-    }
-    return this.http.post<PaymentDto>(`${this.API_URL}/admin/${orderId}/payments`, null, { params });
   }
 }

@@ -1,0 +1,68 @@
+<div class="purchase" [class.purchase--detail]="size() === 'detail'">
+  @if (weightBased()) {
+    <div class="weights" role="radiogroup" [attr.aria-label]="'Pack size for ' + product().productName">
+      @for (w of weights; track w) {
+        <button
+          type="button"
+          role="radio"
+          class="pill"
+          [class.pill--active]="weight() === w"
+          [attr.aria-checked]="weight() === w"
+          [disabled]="soldOut() || busy()"
+          (click)="pick(w)"
+        >
+          {{ w }}
+        </button>
+      }
+    </div>
+  }
+
+  <div class="row">
+    <span class="price">
+      ₹{{ price() | number: '1.0-2' }}<small> / {{ unitLabel() }}</small>
+    </span>
+
+    @if (soldOut()) {
+      <button type="button" class="btn" disabled>Out of stock</button>
+    } @else if (qty() === 0) {
+      <button type="button" class="btn btn--add" [disabled]="busy()" (click)="add()">
+        @if (busy()) {
+          <span class="pd-spinner" aria-hidden="true"></span> Adding…
+        } @else {
+          Add to cart
+        }
+      </button>
+    } @else {
+      <div class="stepper" role="group" [attr.aria-label]="'Quantity of ' + product().productName + (weightBased() ? ' (' + weight() + ')' : '')">
+        <button
+          type="button"
+          class="step"
+          aria-label="Decrease quantity"
+          [disabled]="busy()"
+          (click)="cart.decrement(product().id, weight())"
+        >
+          −
+        </button>
+        <output class="qty" aria-live="polite">{{ qty() }}</output>
+        <button
+          type="button"
+          class="step"
+          aria-label="Increase quantity"
+          [disabled]="busy()"
+          (click)="cart.increment(product().id, weight())"
+        >
+          +
+        </button>
+      </div>
+    }
+  </div>
+
+  @if (weightBased() && inCart().length > 0) {
+    <p class="in-cart" aria-live="polite">
+      In your cart:
+      @for (line of inCart(); track line.weight; let last = $last) {
+        <span class="in-cart-line" [class.in-cart-line--picked]="line.weight === weight()">{{ line.weight }} × {{ line.quantity }}</span>@if (!last) {, }
+      }
+    </p>
+  }
+</div>

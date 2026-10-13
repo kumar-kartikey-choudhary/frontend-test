@@ -1,302 +1,231 @@
-/* src/app/header/header.css */
-
-/* --- GLOBAL RESET (Assuming this is in styles.css, but including for reference) --- */
-/* body { margin: 0; padding: 0; } */
-
-/* --- 1. RUNNING MESSAGE / TOP-TICKER STYLES --- */
-.top-ticker {
-  /* Fixed height for the ticker strip */
-  height: 30px;
-  background-color: #ffc107; /* Amber/Gold */
-  color: #1a237e; /* Deep blue/indigo */
-  text-align: center;
-  overflow: hidden;
-  font-size: 0.9em;
-  font-weight: 600;
-  line-height: 30px;
-
-  /* FIX: Make Ticker Sticky at the very top */
+/* The host is the grid item that stays put while the page scrolls; a sticky child could only move
+   inside this element, which is exactly as tall as the sidebar. */
+:host {
   position: sticky;
   top: 0;
-
-  z-index: 1002; /* Must be the highest element */
-}
-
-.ticker-content {
-  margin: 0;
-  white-space: nowrap;
-  animation: marquee 20s linear infinite;
-}
-
-.ticker-content span {
-  padding-right: 50px;
-  display: inline-block;
-}
-
-@keyframes marquee {
-  0% {
-    transform: translateX(100%);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
-}
-
-/* --- 2. BASE CONTAINER: DARK THEME & STICKY HEADER --- */
-.pratik-header.dark-theme {
-  position: sticky;
-  top: 30px;
   z-index: 1000;
-
-  background-color: #2b3e50;
-  color: #fff;
-  /* border-bottom: 3px solid #f2f2f2;  */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-  padding: 10px 0;
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 1400px;
-  margin: 0 auto;
-  /* FIX: Set padding to 0 for edge-to-edge alignment */
-  padding: 0;
-}
-
-/* --- 3. LOGO/BRANDING --- */
-.logo-link {
-  text-decoration: none;
-  color: #ffd700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 25px; /* Added padding to align content with old header */
-}
-
-.logo-image {
-  height: 50px;
-  max-width: 100%;
-  margin-right: 8px;
-}
-
-.logo-link h1 {
-  font-size: 1.5em;
-  margin: 0;
-  font-family: 'Georgia', serif;
-  font-weight: 700;
-}
-
-.logo-link .tagline {
-  display: none;
-}
-
-/* --- 4. DESKTOP NAVIGATION & DROPDOWN --- */
-.desktop-nav ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-}
-
-.desktop-nav li {
-  position: relative; /* CRITICAL for dropdown positioning */
-  margin: 0 15px;
-}
-
-.desktop-nav a {
-  text-decoration: none;
-  color: #f2f2f2;
-  font-weight: 500;
-  padding: 10px 5px;
-  transition:
-    color 0.3s,
-    border-bottom 0.3s;
-  display: flex;
-  align-items: center;
-}
-
-.desktop-nav a:hover {
-  color: #ffd700;
-}
-
-.desktop-nav a.active-link {
-  color: #ffd700;
-  border-bottom: 2px solid #ff8f00;
-}
-
-/* Dropdown Arrow */
-.dropdown-arrow {
-  font-size: 0.7em;
-  margin-left: 5px;
-  transition: transform 0.2s;
-}
-
-.dropdown-active .dropdown-arrow {
-  transform: rotate(180deg);
-}
-
-/* DROPDOWN MENU PANEL STYLES */
-.dropdown-menu {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-
-  background-color: #3d5a71; /* Lighter dark background */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-  border-radius: 4px;
-  overflow: hidden;
-  min-width: 180px;
-
-  /* Visibility Control */
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.3s,
-    visibility 0.3s;
-  z-index: 1005; /* High z-index to ensure visibility */
-}
-
-.dropdown-menu.visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-.dropdown-menu a {
-  color: #f2f2f2;
-  padding: 12px 20px;
   display: block;
+  height: 100vh;
+  height: 100dvh;
+}
+
+.adm-side {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1.25rem 0.9rem;
+  overflow-y: auto;
+  color: var(--pd-chrome-text);
+  background: var(--pd-chrome);
+}
+
+/* ---- brand ---- */
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding: 0 0.4rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.brand-name {
+  font-family: var(--pd-font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pd-chrome-accent);
+}
+
+.brand-sub {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pd-chrome-muted);
+}
+
+.menu-btn {
+  display: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0.4rem;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--pd-chrome-line);
+  border-radius: 0.55rem;
+  cursor: pointer;
+}
+
+svg {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.menu-btn svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- navigation ---- */
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  font-size: 0.925rem;
+  font-weight: 550;
+  color: var(--pd-chrome-muted);
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  border-radius: 0.55rem;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.nav-link:hover {
+  color: var(--pd-chrome-text);
+  background: rgb(255 255 255 / 6%);
+}
+
+.nav-link.active {
+  color: var(--pd-chrome-accent);
+  background: rgb(240 180 90 / 12%);
+  border-left-color: var(--pd-chrome-accent);
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* ---- footer ---- */
+.foot {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: auto;
+  padding: 1rem 0.4rem 0;
+  border-top: 1px solid var(--pd-chrome-line);
+}
+
+.store-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--pd-chrome-muted);
+  text-decoration: none;
+}
+.store-link:hover {
+  color: var(--pd-chrome-accent);
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.who-avatar {
+  display: grid;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--pd-chrome);
+  background: var(--pd-chrome-accent);
+  border-radius: 50%;
+}
+
+.who-name {
+  overflow: hidden;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: left;
-  font-weight: 400;
-  border-bottom: 1px solid #4a6880;
-}
-
-.dropdown-menu a:hover {
-  background-color: #4a6880;
-  color: #ffc107;
-  border-bottom: none;
-}
-
-/* --- 5. UTILITY BLOCK (Right Side) --- */
-.utility-block {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding-right: 25px; /* Added padding to align content with old header */
-}
-
-.phone-link {
-  color: #ffffff;
-  text-decoration: none;
-  font-weight: 500;
-  font-size: 0.9em;
-  padding-right: 15px;
-  border-right: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.icon-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.utility-icon {
-  font-size: 1.3em;
-  padding: 5px 8px;
-  color: #f2f2f2;
-  transition: color 0.2s;
-  text-decoration: none;
-}
-
-.utility-icon:hover {
-  color: #ffd700;
 }
 
 .logout-btn {
-  background-color: #ff8f00;
-  color: #fff;
-  border: none;
-  border-radius: 5px;
-  padding: 8px 15px;
-  font-weight: bold;
+  padding: 0.55rem 0.9rem;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--pd-chrome-text);
+  background: transparent;
+  border: 1px solid var(--pd-chrome-line);
+  border-radius: 0.55rem;
   cursor: pointer;
-  transition: background-color 0.2s;
-  text-transform: uppercase;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
 }
-
 .logout-btn:hover {
-  background-color: #e57300;
+  background: rgb(255 255 255 / 8%);
+  border-color: var(--pd-chrome-accent);
 }
 
-/* --- 6. MOBILE TOGGLE BUTTON & NAVIGATION --- */
-.menu-toggle-btn {
-  display: none;
-  background: none;
-  color: #fff;
-  border: 1px solid #fff;
-  border-radius: 5px;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 1.2em;
-  margin-left: 15px;
-}
-
-.mobile-nav {
-  display: none;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%;
-  background-color: #2b3e50;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-  z-index: 999;
-}
-
-.mobile-nav.open {
-  display: block;
-}
-
-.mobile-nav ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.mobile-nav a {
-  display: block;
-  padding: 15px 25px;
-  text-decoration: none;
-  color: #f2f2f2;
-  border-bottom: 1px solid #3d5a71;
-  transition: background-color 0.2s;
-}
-
-.mobile-nav a:hover {
-  background-color: #3d5a71;
-  color: #ffd700;
-}
-
-/* --- 7. MEDIA QUERY FOR RESPONSIVENESS --- */
-@media (max-width: 1050px) {
-  .desktop-nav,
-  .phone-link,
-  .icon-group {
-    display: none;
+/* ---- small screens: the sidebar becomes a top bar with a drop-down menu ---- */
+@media (max-width: 62rem) {
+  :host {
+    height: auto;
   }
 
-  .menu-toggle-btn {
+  .adm-side {
+    height: auto;
+    max-height: 100vh;
+    padding: 0.7rem 1rem;
+  }
+
+  .brand-row {
+    margin-bottom: 0;
+  }
+
+  .menu-btn {
     display: block;
   }
-}
 
-@media (max-width: 600px) {
-  .top-ticker {
+  .nav,
+  .foot {
     display: none;
   }
-  .pratik-header.dark-theme {
-    top: 0;
+
+  .open .nav {
+    display: flex;
+    margin-top: 0.9rem;
+  }
+
+  .open .foot {
+    display: grid;
+    margin-top: 0.9rem;
   }
 }

@@ -1,0 +1,107 @@
+<div class="page">
+  <section class="banner">
+    <h1>{{ config().title }}</h1>
+    <p>{{ config().subtitle }}</p>
+  </section>
+
+  <section class="toolbar" aria-label="Search and filter">
+    <div class="search">
+      <label class="pd-visually-hidden" for="catalog-search">{{ config().searchPlaceholder }}</label>
+      <input
+        id="catalog-search"
+        type="search"
+        autocomplete="off"
+        [placeholder]="config().searchPlaceholder"
+        [value]="searchText()"
+        (input)="onSearch($any($event.target).value)"
+      />
+    </div>
+
+    <div class="controls">
+      <label class="select">
+        <span>Sort by</span>
+        <select [value]="sort()" (change)="setSort($any($event.target).value)">
+          <option value="featured">Featured</option>
+          <option value="price-asc">Price: low to high</option>
+          <option value="price-desc">Price: high to low</option>
+          <option value="name">Name: A to Z</option>
+        </select>
+      </label>
+
+      <button
+        type="button"
+        class="chip"
+        [class.chip--on]="inStockOnly()"
+        [attr.aria-pressed]="inStockOnly()"
+        (click)="toggleInStock()"
+      >
+        In stock only
+      </button>
+    </div>
+  </section>
+
+  <section class="listing">
+    @if (loading()) {
+      <div class="grid" aria-busy="true" aria-label="Loading products">
+        @for (i of skeletons; track i) {
+          <div class="pd-skeleton pd-skeleton--dark skeleton-card"></div>
+        }
+      </div>
+    } @else if (failed()) {
+      <div class="state" role="alert">
+        <p>We couldn't load the products right now.</p>
+        <button type="button" class="btn" (click)="load()">Try again</button>
+      </div>
+    } @else if (filtered().length === 0) {
+      <div class="state">
+        @if (filtersActive()) {
+          <p>No products match your search or filters.</p>
+          <button type="button" class="btn" (click)="clearFilters()">Clear filters</button>
+        } @else {
+          <p>Nothing here yet - check back soon.</p>
+        }
+      </div>
+    } @else {
+      <p class="count" role="status">
+        {{ filtered().length }} {{ filtered().length === 1 ? 'item' : 'items' }}
+      </p>
+
+      @if (config().groupByType) {
+        @for (group of groups(); track group.name) {
+          <h2 class="group">{{ group.name }}</h2>
+          <div class="grid">
+            @for (product of group.items; track product.id) {
+              <app-product-card [product]="product" />
+            }
+          </div>
+        }
+      } @else {
+        <div class="grid">
+          @for (product of shown(); track product.id) {
+            <app-product-card [product]="product" />
+          }
+        </div>
+      }
+
+      @if (hasMore()) {
+        <div class="more">
+          <button type="button" class="btn" (click)="showMore()">Show more</button>
+        </div>
+      }
+    }
+  </section>
+
+  <section class="cta">
+    <h2>{{ config().cta.title }}</h2>
+    @if (config().cta.text) {
+      <p>{{ config().cta.text }}</p>
+    }
+    <div class="cta-links">
+      @for (link of config().cta.links; track link.to) {
+        <a [routerLink]="link.to" class="cta-link" [class.cta-link--primary]="link.primary">
+          {{ link.label }}
+        </a>
+      }
+    </div>
+  </section>
+</div>

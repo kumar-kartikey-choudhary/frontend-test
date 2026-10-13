@@ -1,0 +1,28 @@
+<div class="page">
+  <section class="banner">
+    <h1>My Wishlist</h1>
+    <p>Things you've saved for later.</p>
+  </section>
+
+  <section class="listing" aria-live="polite">
+    @if (loading()) {
+      <p class="state" aria-busy="true">Loading your wishlist…</p>
+    } @else if (failed()) {
+      <div class="state" role="alert">
+        <p>We couldn't load your wishlist.</p>
+        <button type="button" class="link" (click)="load()">Try again</button>
+      </div>
+    } @else if (visible().length === 0) {
+      <div class="state">
+        <p>Nothing saved yet. Tap the heart on any product to keep it here.</p>
+        <a routerLink="/products" class="link">Browse products</a>
+      </div>
+    } @else {
+      <div class="grid">
+        @for (product of visible(); track product.id) {
+          <app-product-card [product]="product" />
+        }
+      </div>
+    }
+  </section>
+</div>

@@ -1,195 +1,366 @@
 <div class="account-container">
-  <div class="account-tabs">
-    <button class="tab-btn" [class.active]="activeTab === 'profile'" (click)="selectTab('profile')">
-      Profile
-    </button>
-    <button class="tab-btn" [class.active]="activeTab === 'addresses'" (click)="selectTab('addresses')">
-      Addresses
-    </button>
-    <button class="tab-btn" [class.active]="activeTab === 'notifications'" (click)="selectTab('notifications')">
-      Notifications
-      <span *ngIf="unreadCount > 0" class="unread-pill">{{ unreadCount }}</span>
-    </button>
+  <div class="account-tabs" role="tablist" aria-label="Account sections">
+    @for (tab of tabs; track tab.id) {
+      <button
+        type="button"
+        role="tab"
+        class="tab-btn"
+        [id]="'tab-' + tab.id"
+        [class.active]="activeTab() === tab.id"
+        [attr.aria-selected]="activeTab() === tab.id"
+        [attr.aria-controls]="'panel-' + tab.id"
+        (click)="selectTab(tab.id)"
+      >
+        {{ tab.label }}
+        @if (tab.id === 'notifications' && unreadCount() > 0) {
+          <span class="unread-pill" [attr.aria-label]="unreadCount() + ' unread'">{{ unreadCount() }}</span>
+        }
+      </button>
+    }
   </div>
 
   <!-- ==================== PROFILE TAB ==================== -->
-  <div *ngIf="activeTab === 'profile'">
-    <div *ngIf="isLoading" class="loading-state">Loading profile...</div>
-    <div *ngIf="errorMsg" class="error-msg">{{ errorMsg }}</div>
-    <div *ngIf="successMsg" class="success-msg">{{ successMsg }}</div>
-
-    <div *ngIf="profile && !isLoading" class="profile-card">
-      <h2>My Profile</h2>
-
-      <div *ngIf="!isEditing">
-        <div class="profile-row">
-          <span>Name:</span>
-          <strong>{{ profile.firstName }} {{ profile.middleName }} {{ profile.lastName }}</strong>
+  @if (activeTab() === 'profile') {
+    <div id="panel-profile" role="tabpanel" aria-labelledby="tab-profile">
+      @if (profileLoading()) {
+        <div class="loading-state" aria-busy="true">Loading profile…</div>
+      }
+      @if (profileError()) {
+        <div class="pd-alert pd-alert--error" role="alert">
+          {{ profileError() }}
+          <button type="button" class="btn-link" (click)="loadProfile()">Try again</button>
         </div>
-        <div class="profile-row">
-          <span>Username:</span>
-          <strong>{{ profile.username }}</strong>
-        </div>
-        <div class="profile-row">
-          <span>Email:</span>
-          <strong>{{ profile.email }}</strong>
-        </div>
-        <div class="profile-row">
-          <span>Phone:</span>
-          <strong>{{ profile.phoneNumber || '—' }}</strong>
-        </div>
-        <div class="profile-row">
-          <span>Role:</span>
-          <strong>{{ profile.role }}</strong>
-        </div>
-        <button class="btn-edit" (click)="startEdit()">Edit Profile</button>
-      </div>
+      }
 
-      <div *ngIf="isEditing" class="profile-edit">
-        <div class="form-group">
-          <label>First Name</label>
-          <input [(ngModel)]="editData.firstName" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Middle Name</label>
-          <input [(ngModel)]="editData.middleName" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Last Name</label>
-          <input [(ngModel)]="editData.lastName" type="text" />
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input [(ngModel)]="editData.email" type="email" />
-        </div>
-        <div class="form-group">
-          <label>Phone</label>
-          <input [(ngModel)]="editData.phoneNumber" type="tel" />
-        </div>
-        <div class="form-actions">
-          <button class="btn-save" (click)="saveProfile()">Save</button>
-          <button class="btn-cancel" (click)="cancelEdit()">Cancel</button>
-        </div>
-      </div>
-    </div>
-  </div>
+      @if (profile(); as p) {
+        <div class="profile-card">
+          <h2>My Profile</h2>
 
-  <!-- ==================== ADDRESSES TAB ==================== -->
-  <div *ngIf="activeTab === 'addresses'">
-    <div class="section-header">
-      <h2>My Addresses</h2>
-      <button class="btn-primary" (click)="addNewAddress()">+ Add New Address</button>
-    </div>
-
-    <div *ngIf="isLoadingAddresses" class="loading-state">Loading addresses...</div>
-
-    <div *ngIf="!isLoadingAddresses && addresses.length === 0 && !isEditingAddress" class="empty-state">
-      <p>You haven't saved any delivery addresses yet.</p>
-      <button class="btn-primary" (click)="addNewAddress()">Add your first address</button>
-    </div>
-
-    <div *ngIf="!isLoadingAddresses && addresses.length > 0" class="address-grid">
-      <div *ngFor="let address of addresses" class="address-card" [class.is-default]="address.isDefault">
-        <span *ngIf="address.isDefault" class="default-badge">Default</span>
-        <h3>{{ address.label }}</h3>
-        <p>{{ address.line1 }}</p>
-        <p *ngIf="address.line2">{{ address.line2 }}</p>
-        <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
-        <p *ngIf="address.landmark" class="landmark">Landmark: {{ address.landmark }}</p>
-
-        <div class="card-actions">
-          <button class="btn-link" (click)="editAddress(address)">Edit</button>
-          <button *ngIf="!address.isDefault" class="btn-link" (click)="markAddressDefault(address)">
-            Set as default
-          </button>
-          <button class="btn-link btn-danger" (click)="removeAddress(address)">Delete</button>
-        </div>
-      </div>
-    </div>
-
-    <div *ngIf="isEditingAddress" class="address-form-overlay">
-      <div class="address-form-panel">
-        <h2>{{ currentAddress.id ? 'Edit Address' : 'Add New Address' }}</h2>
-
-        <form (ngSubmit)="saveAddress()">
-          <div class="input-group">
-            <label>Label</label>
-            <input type="text" [(ngModel)]="currentAddress.label" name="label" placeholder="Home, Work, ..." required />
-          </div>
-
-          <div class="input-group">
-            <label>Address Line 1</label>
-            <input type="text" [(ngModel)]="currentAddress.line1" name="line1" required />
-          </div>
-
-          <div class="input-group">
-            <label>Address Line 2 (optional)</label>
-            <input type="text" [(ngModel)]="currentAddress.line2" name="line2" />
-          </div>
-
-          <div class="form-row-group">
-            <div class="input-group">
-              <label>City</label>
-              <input type="text" [(ngModel)]="currentAddress.city" name="city" required />
+          @if (!editing()) {
+            <div class="profile-row">
+              <span>Name:</span>
+              <strong>{{ p.firstName }} {{ p.middleName }} {{ p.lastName }}</strong>
             </div>
-            <div class="input-group">
-              <label>State</label>
-              <input type="text" [(ngModel)]="currentAddress.state" name="state" required />
+            <div class="profile-row">
+              <span>Username:</span>
+              <strong>{{ p.username }}</strong>
             </div>
-            <div class="input-group">
-              <label>Pincode</label>
-              <input type="text" [(ngModel)]="currentAddress.pincode" name="pincode" required />
+            <div class="profile-row">
+              <span>Email:</span>
+              <strong>{{ p.email }}</strong>
             </div>
-          </div>
+            <div class="profile-row">
+              <span>Email status:</span>
+              @if (p.emailVerified) {
+                <strong class="verified">✓ Confirmed</strong>
+              } @else {
+                <span class="unverified">
+                  Not confirmed yet
+                  <button type="button" class="btn-link" [disabled]="resendingVerification()" (click)="resendVerification()">
+                    {{ resendingVerification() ? 'Sending…' : 'Send me the email' }}
+                  </button>
+                </span>
+              }
+            </div>
+            <div class="profile-row">
+              <span>Phone:</span>
+              <strong>{{ p.phoneNumber || '—' }}</strong>
+            </div>
+            <div class="profile-row">
+              <span>Role:</span>
+              <strong>{{ p.role }}</strong>
+            </div>
+            <button type="button" class="btn-edit" (click)="startEdit()">Edit Profile</button>
+          } @else {
+            <form class="profile-edit" #profileForm="ngForm" (ngSubmit)="saveProfile(profileForm)" novalidate>
+              <div class="form-group">
+                <label for="p-first">First Name</label>
+                <input id="p-first" name="firstName" type="text" autocomplete="given-name" required [(ngModel)]="editData.firstName" #first="ngModel" [attr.aria-invalid]="first.invalid && first.touched ? true : null" />
+                @if (first.invalid && first.touched) { <small class="field-error" role="alert">First name is required.</small> }
+              </div>
+              <div class="form-group">
+                <label for="p-middle">Middle Name</label>
+                <input id="p-middle" name="middleName" type="text" autocomplete="additional-name" [(ngModel)]="editData.middleName" />
+              </div>
+              <div class="form-group">
+                <label for="p-last">Last Name</label>
+                <input id="p-last" name="lastName" type="text" autocomplete="family-name" required [(ngModel)]="editData.lastName" #last="ngModel" [attr.aria-invalid]="last.invalid && last.touched ? true : null" />
+                @if (last.invalid && last.touched) { <small class="field-error" role="alert">Last name is required.</small> }
+              </div>
+              <div class="form-group">
+                <label for="p-email">Email</label>
+                <input id="p-email" name="email" type="email" autocomplete="email" required email [(ngModel)]="editData.email" #mail="ngModel" [attr.aria-invalid]="mail.invalid && mail.touched ? true : null" />
+                @if (mail.invalid && mail.touched) { <small class="field-error" role="alert">Enter a valid email address.</small> }
+              </div>
+              <div class="form-group">
+                <label for="p-phone">Phone</label>
+                <input id="p-phone" name="phoneNumber" type="tel" inputmode="numeric" autocomplete="tel-national" pattern="[0-9]{10}" [(ngModel)]="editData.phoneNumber" #phone="ngModel" [attr.aria-invalid]="phone.invalid && phone.touched ? true : null" />
+                @if (phone.invalid && phone.touched) { <small class="field-error" role="alert">Enter a 10-digit mobile number.</small> }
+              </div>
+              <div class="form-actions">
+                <button type="submit" class="btn-save" [disabled]="savingProfile()">
+                  {{ savingProfile() ? 'Saving…' : 'Save' }}
+                </button>
+                <button type="button" class="btn-cancel" (click)="cancelEdit()">Cancel</button>
+              </div>
+            </form>
+          }
+        </div>
+      }
+    </div>
+  }
 
-          <div class="input-group">
-            <label>Landmark (optional)</label>
-            <input type="text" [(ngModel)]="currentAddress.landmark" name="landmark" />
-          </div>
+  <!-- ==================== PASSWORD TAB ==================== -->
+  @if (activeTab() === 'security') {
+    <div id="panel-security" role="tabpanel" aria-labelledby="tab-security">
+      <div class="profile-card">
+        <h2>Change password</h2>
+        <p class="checkout-note">
+          You'll stay signed in on this device. Anyone signed in on another device will be signed out.
+        </p>
 
+        <form class="profile-edit" #passwordForm="ngForm" (ngSubmit)="changePassword(passwordForm)" novalidate>
+          <div class="form-group">
+            <label for="pw-current">Current password</label>
+            <input id="pw-current" name="currentPassword" [type]="showPasswords() ? 'text' : 'password'" autocomplete="current-password" required [(ngModel)]="passwords.current" #cur="ngModel" [attr.aria-invalid]="cur.invalid && cur.touched ? true : null" />
+            @if (cur.invalid && cur.touched) { <small class="field-error" role="alert">Enter your current password.</small> }
+          </div>
+          <div class="form-group">
+            <label for="pw-new">New password</label>
+            <input id="pw-new" name="newPassword" [type]="showPasswords() ? 'text' : 'password'" autocomplete="new-password" required [minlength]="MIN_PASSWORD_LENGTH" [(ngModel)]="passwords.next" #nxt="ngModel" [attr.aria-invalid]="(nxt.invalid && nxt.touched) || newPasswordSameAsCurrent ? true : null" />
+            @if (nxt.invalid && nxt.touched) { <small class="field-error" role="alert">Use at least {{ MIN_PASSWORD_LENGTH }} characters.</small> }
+            @if (newPasswordSameAsCurrent) { <small class="field-error" role="alert">Your new password must be different from your current one.</small> }
+          </div>
+          <div class="form-group">
+            <label for="pw-confirm">Confirm new password</label>
+            <input id="pw-confirm" name="confirmPassword" [type]="showPasswords() ? 'text' : 'password'" autocomplete="new-password" required [(ngModel)]="passwords.confirm" #cnf="ngModel" [attr.aria-invalid]="passwordsDontMatch ? true : null" />
+            @if (passwordsDontMatch) { <small class="field-error" role="alert">The two passwords don't match.</small> }
+          </div>
+          <label class="show-passwords">
+            <input type="checkbox" [checked]="showPasswords()" (change)="showPasswords.set(!showPasswords())" /> Show passwords
+          </label>
           <div class="form-actions">
-            <button type="submit" class="btn-save" [disabled]="isSavingAddress">
-              {{ isSavingAddress ? 'Saving...' : 'Save Address' }}
+            <button type="submit" class="btn-save" [disabled]="changingPassword()">
+              {{ changingPassword() ? 'Changing…' : 'Change password' }}
             </button>
-            <button type="button" class="btn-cancel" (click)="cancelAddressEdit()">Cancel</button>
           </div>
         </form>
       </div>
+
+      <div class="profile-card danger-zone">
+        <h2>Delete my account</h2>
+        <p class="checkout-note">
+          This erases your name, contact details, saved addresses and notifications, and signs you out everywhere.
+          Your past orders stay on record with the shop. It can't be undone.
+        </p>
+        @if (!deleteFormOpen()) {
+          <button type="button" class="btn-delete" (click)="deleteFormOpen.set(true)">Delete my account…</button>
+        } @else {
+          <form class="profile-edit" (ngSubmit)="deleteAccount()" novalidate>
+            <div class="form-group">
+              <label for="delete-password">Enter your password to confirm</label>
+              <input id="delete-password" name="deletePassword" type="password" autocomplete="current-password" [(ngModel)]="deletePassword" />
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn-delete" [disabled]="deletingAccount() || !deletePassword">
+                {{ deletingAccount() ? 'Deleting…' : 'Permanently delete my account' }}
+              </button>
+              <button type="button" class="btn-cancel" (click)="deleteFormOpen.set(false); deletePassword = ''">Cancel</button>
+            </div>
+          </form>
+        }
+      </div>
     </div>
-  </div>
+  }
+
+  <!-- ==================== ADDRESSES TAB ==================== -->
+  @if (activeTab() === 'addresses') {
+    <div id="panel-addresses" role="tabpanel" aria-labelledby="tab-addresses">
+      @if (returnUrl()) {
+        <div class="pd-alert pd-alert--info checkout-note" role="status">
+          Add or choose your delivery address - we'll take you back to checkout when you save.
+        </div>
+      }
+
+      <div class="section-header">
+        <h2>My Addresses</h2>
+        <button type="button" class="btn-primary" (click)="addNewAddress()">+ Add New Address</button>
+      </div>
+
+      @if (addressesLoading()) {
+        <div class="loading-state" aria-busy="true">Loading addresses…</div>
+      } @else if (addresses().length === 0 && !addressFormOpen()) {
+        <div class="empty-state">
+          <p>You haven't saved any delivery addresses yet.</p>
+          <button type="button" class="btn-primary" (click)="addNewAddress()">Add your first address</button>
+        </div>
+      } @else {
+        <div class="address-grid">
+          @for (address of addresses(); track address.id) {
+            <div class="address-card" [class.is-default]="address.isDefault">
+              @if (address.isDefault) {
+                <span class="default-badge">Default</span>
+              }
+              <h3>{{ address.label }}</h3>
+              <p>{{ address.line1 }}</p>
+              @if (address.line2) {
+                <p>{{ address.line2 }}</p>
+              }
+              <p>{{ address.city }}, {{ address.state }} - {{ address.pincode }}</p>
+              @if (address.landmark) {
+                <p class="landmark">Landmark: {{ address.landmark }}</p>
+              }
+
+              <div class="card-actions">
+                <button type="button" class="btn-link" (click)="editAddress(address)">Edit</button>
+                @if (!address.isDefault) {
+                  <button type="button" class="btn-link" (click)="markAddressDefault(address)">Set as default</button>
+                }
+                <button type="button" class="btn-link btn-danger" (click)="removeAddress(address)">Delete</button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      @if (addressFormOpen()) {
+        <div class="address-form-overlay">
+          <div class="address-form-panel" role="dialog" aria-modal="true" aria-labelledby="address-form-title">
+            <h2 id="address-form-title">{{ currentAddress.id ? 'Edit Address' : 'Add New Address' }}</h2>
+
+            <form #addressForm="ngForm" (ngSubmit)="saveAddress(addressForm)" novalidate>
+              <div class="input-group">
+                <label for="a-label">Label</label>
+                <input id="a-label" type="text" [(ngModel)]="currentAddress.label" name="label" placeholder="Home, Work, ..." required />
+              </div>
+
+              <div class="input-group">
+                <label for="a-line1">Address Line 1</label>
+                <input id="a-line1" type="text" autocomplete="address-line1" [(ngModel)]="currentAddress.line1" name="line1" required />
+              </div>
+
+              <div class="input-group">
+                <label for="a-line2">Address Line 2 (optional)</label>
+                <input id="a-line2" type="text" autocomplete="address-line2" [(ngModel)]="currentAddress.line2" name="line2" />
+              </div>
+
+              <div class="form-row-group">
+                <div class="input-group">
+                  <label for="a-city">City</label>
+                  <input id="a-city" type="text" autocomplete="address-level2" [(ngModel)]="currentAddress.city" name="city" required />
+                </div>
+                <div class="input-group">
+                  <label for="a-state">State</label>
+                  <input id="a-state" type="text" autocomplete="address-level1" [(ngModel)]="currentAddress.state" name="state" required />
+                </div>
+                <div class="input-group">
+                  <label for="a-pin">Pincode</label>
+                  <input id="a-pin" type="text" inputmode="numeric" autocomplete="postal-code" pattern="[0-9]{6}" [(ngModel)]="currentAddress.pincode" name="pincode" required />
+                </div>
+              </div>
+
+              <div class="input-group">
+                <label for="a-landmark">Landmark (optional)</label>
+                <input id="a-landmark" type="text" [(ngModel)]="currentAddress.landmark" name="landmark" />
+              </div>
+
+              @if (addressForm.submitted && addressForm.invalid) {
+                <p class="field-error" role="alert">
+                  Please fill in the label, address line 1, city, state and a 6-digit pincode.
+                </p>
+              }
+
+              <div class="form-actions">
+                <button type="submit" class="btn-save" [disabled]="savingAddress()">
+                  {{ savingAddress() ? 'Saving…' : 'Save Address' }}
+                </button>
+                <button type="button" class="btn-cancel" (click)="cancelAddressEdit()">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ==================== SAVED CARDS TAB ==================== -->
+  @if (activeTab() === 'cards') {
+    <div id="panel-cards" role="tabpanel" aria-labelledby="tab-cards">
+      <div class="section-header">
+        <h2>Saved cards</h2>
+      </div>
+
+      @if (cardsLoading()) {
+        <div class="loading-state" aria-busy="true">Loading saved cards…</div>
+      } @else if (cards().length === 0) {
+        <div class="empty-state">
+          <p>You have no saved cards. Tick "Save this card" when paying by card to keep one here.</p>
+        </div>
+      } @else {
+        <ul class="card-list">
+          @for (card of cards(); track card.id) {
+            <li class="saved-card">
+              <span class="card-network">{{ card.cardNetwork }}</span>
+              <span class="card-number">•••• {{ card.cardLastFour }}</span>
+              <span class="card-expiry">Expires {{ expiryOf(card) }}</span>
+              @if (card.isDefault) {
+                <span class="default-badge default-badge--inline">Default</span>
+              }
+              <button type="button" class="btn-link btn-danger" (click)="removeCard(card)">Remove</button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
 
   <!-- ==================== NOTIFICATIONS TAB ==================== -->
-  <div *ngIf="activeTab === 'notifications'">
-    <div class="section-header">
-      <h2>Notifications</h2>
-      <button *ngIf="unreadCount > 0" class="btn-link" (click)="markAllNotificationsRead()">
-        Mark all as read
-      </button>
-    </div>
+  @if (activeTab() === 'notifications') {
+    <div id="panel-notifications" role="tabpanel" aria-labelledby="tab-notifications">
+      <div class="section-header">
+        <h2>Notifications</h2>
+        @if (unreadCount() > 0) {
+          <button type="button" class="btn-link" (click)="markAllNotificationsRead()">Mark all as read</button>
+        }
+      </div>
 
-    <div *ngIf="isLoadingNotifications" class="loading-state">Loading notifications...</div>
-
-    <div *ngIf="!isLoadingNotifications && notifications.length === 0" class="empty-state">
-      <p>You're all caught up - no notifications yet.</p>
-    </div>
-
-    <ul *ngIf="!isLoadingNotifications && notifications.length > 0" class="notification-list">
-      <li
-        *ngFor="let notification of notifications"
-        class="notification-row"
-        [class.unread]="!notification.read"
-        (click)="markNotificationRead(notification)"
-      >
-        <span class="notification-icon">{{ notificationIconFor(notification.type) }}</span>
-        <div class="notification-body">
-          <p class="notification-title">{{ notification.title }}</p>
-          <p *ngIf="notification.message" class="notification-message">{{ notification.message }}</p>
-          <p class="notification-date">{{ notification.createdAt | date: 'short' }}</p>
+      @if (notificationsLoading()) {
+        <div class="loading-state" aria-busy="true">Loading notifications…</div>
+      } @else if (notifications().length === 0) {
+        <div class="empty-state">
+          <p>You're all caught up - no notifications yet.</p>
         </div>
-        <button class="btn-icon-delete" (click)="removeNotification(notification); $event.stopPropagation()">
-          ✕
-        </button>
-      </li>
-    </ul>
-  </div>
+      } @else {
+        <ul class="notification-list">
+          @for (notification of notifications(); track notification.id) {
+            <li class="notification-row" [class.unread]="!notification.read">
+              <button
+                type="button"
+                class="notification-main"
+                [attr.aria-label]="(notification.read ? '' : 'Unread: ') + notification.title"
+                (click)="markNotificationRead(notification)"
+              >
+                <span class="notification-icon" aria-hidden="true">{{ notificationIconFor(notification.type) }}</span>
+                <span class="notification-body">
+                  <span class="notification-title">{{ notification.title }}</span>
+                  @if (notification.message) {
+                    <span class="notification-message">{{ notification.message }}</span>
+                  }
+                  <span class="notification-date">{{ notification.createdAt | date: 'short' }}</span>
+                </span>
+              </button>
+              <button
+                type="button"
+                class="btn-icon-delete"
+                [attr.aria-label]="'Delete notification: ' + notification.title"
+                (click)="removeNotification(notification)"
+              >
+                ✕
+              </button>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
 </div>

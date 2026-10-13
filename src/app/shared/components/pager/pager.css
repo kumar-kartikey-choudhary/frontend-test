@@ -1,0 +1,67 @@
+:host {
+  display: block;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 0.8rem 1.25rem;
+  border-top: 1px solid var(--pd-border);
+  font-size: 0.875rem;
+  color: var(--pd-muted);
+}
+
+.page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.size {
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--pd-text);
+}
+
+.pager-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pg-btn {
+  padding: 0.3rem 0.8rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--pd-text);
+  background: var(--pd-surface);
+  border: 1px solid var(--pd-gray-300);
+  border-radius: 0.55rem;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.pg-btn:hover:not(:disabled) {
+  color: var(--pd-primary);
+  background: var(--pd-primary-soft);
+  border-color: var(--pd-primary);
+}
+
+.pg-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 40rem) {
+  .pager {
+    justify-content: center;
+    text-align: center;
+  }
+}

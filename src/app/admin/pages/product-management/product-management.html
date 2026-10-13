@@ -1,102 +1,160 @@
-<div class="product-management-container">
-  <h1><span class="icon">🍬</span> Product Catalog Management</h1>
+<div class="adm-page">
+  <header class="adm-head">
+    <div>
+      <h1 class="adm-title">Products</h1>
+      <p class="adm-sub">{{ filtered().length }} {{ filtered().length === 1 ? 'item' : 'items' }} in the catalogue.</p>
+    </div>
+    <div class="adm-head-actions">
+      <button type="button" class="adm-btn adm-btn--primary" (click)="addNew()">+ Add product</button>
+    </div>
+  </header>
 
-  <div class="management-grid">
-    <div class="product-listing-panel panel">
-      <div class="panel-header">
-        <h2>Product Inventory ({{ allProducts.length }} Items)</h2>
-        <button class="btn-primary" (click)="addNewProducts()">+ Add New Product</button>
-      </div>
-
-      <div class="filter-controls">
+  <div class="management-grid" [class.management-grid--single]="!formOpen()">
+    <div class="adm-card product-listing-panel">
+      <div class="adm-toolbar">
+        <label class="pd-visually-hidden" for="product-search">Search products</label>
         <input
-          type="text"
-          placeholder="Search by name or ID..."
-          [(ngModel)]="searchTerm"
-          class="search-input"
+          id="product-search"
+          type="search"
+          placeholder="Search by name or ID…"
+          class="adm-input adm-search"
+          [ngModel]="searchTerm()"
+          (ngModelChange)="setSearch($event)"
           name="search-term"
         />
-        <select [(ngModel)]="selectedCategory" class="category-select" name="category-filter">
+        <label class="pd-visually-hidden" for="category-filter">Category</label>
+        <select
+          id="category-filter"
+          class="adm-select"
+          [ngModel]="selectedCategory()"
+          (ngModelChange)="setCategory($event)"
+          name="category-filter"
+        >
           @for (cat of categories; track cat) {
-            <option [value]="cat">{{ cat }}</option>
+            <option [value]="cat">{{ cat === 'All' ? 'All categories' : label(cat) }}</option>
           }
         </select>
       </div>
 
-      <div class="table-wrapper">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Product Name</th>
-              <th>Category</th>
-              <th>Price</th>
-              <th>Stock Quantity</th>
-              <th>Status</th>
-              <th>Availability</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (product of filteredProducts; track product.id) {
-              <tr
-                [class.low-stock]="product.status === 'Low Stock'"
-                [class.out-stock]="product.status === 'Discontinued'"
-              >
-                <td class="product-id">#{{ product.id }}</td>
-                <td class="product-name">{{ product.productName }}</td>
-                <td>{{ product.category }}</td>
-                <td>₹ {{ product.price | number: '1.2-2' }}</td>
-                <td [class.stock-danger]="product.stockQuantity <= 10">
-                  {{ product.stockQuantity }} {{ product.stockUnit }}
-                </td>
-                <td>
-                  <span [class]="'status-' + product.status.toLowerCase().replaceAll(' ', '-')">{{
-                    product.status
-                  }}</span>
-                </td>
-                <td>{{ product.available }}</td>
-                <td>
-                  <button class="btn-edit" (click)="editProduct(product)">Edit</button>
-                </td>
+      @if (selected().size > 0) {
+        <div class="bulk-bar" role="region" aria-label="Bulk actions">
+          <span class="adm-strong">{{ selected().size }} selected</span>
+          <button type="button" class="adm-btn adm-btn--sm btn-edit" (click)="openAdjust('bulk')">Adjust stock</button>
+          <button type="button" class="adm-btn adm-btn--sm adm-btn--link" (click)="clearSelection()">Clear</button>
+        </div>
+      }
+
+      @if (loading()) {
+        <div class="adm-state" aria-busy="true"><div class="adm-spinner"></div><p>Loading products…</p></div>
+      } @else if (failed()) {
+        <div class="adm-state" role="alert">
+          <p class="adm-error">Could not load products.</p>
+          <button type="button" class="adm-btn adm-btn--sm btn-edit" (click)="load()">Retry</button>
+        </div>
+      } @else if (filtered().length === 0) {
+        <div class="adm-state"><p><strong>No products found</strong></p><p>Nothing matches the current filters.</p></div>
+      } @else {
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead>
+              <tr>
+                <th class="col-check">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all products on this page"
+                    [checked]="allOnPageSelected()"
+                    (change)="togglePage()"
+                  />
+                </th>
+                <th>Product</th>
+                <th>Category</th>
+                <th class="num">Price</th>
+                <th>Stock</th>
+                <th>Status</th>
+                <th>For sale</th>
+                <th><span class="pd-visually-hidden">Actions</span></th>
               </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              @for (product of pageItems(); track product.id) {
+                <tr [class.low-stock]="isLow(product)">
+                  <td class="col-check">
+                    <input
+                      type="checkbox"
+                      [attr.aria-label]="'Select ' + product.productName"
+                      [checked]="selected().has(product.id)"
+                      (change)="toggleOne(product)"
+                    />
+                  </td>
+                  <td>
+                    <div class="product-cell">
+                      <img [src]="thumbOf(product)" alt="" width="42" height="42" loading="lazy" class="thumb" appImgFallback />
+                      <div>
+                        <div class="adm-strong">{{ product.productName }}</div>
+                        <div class="product-id">#{{ product.id.slice(0, 8) }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ label(product.category) }}</td>
+                  <td class="num adm-amount">₹ {{ product.price | number: '1.2-2' }}</td>
+                  <td [class.stock-danger]="isLow(product)">
+                    {{ product.stockQuantity | number: '1.0-3' }} {{ product.stockUnit }}
+                  </td>
+                  <td>
+                    <span class="adm-badge" [class]="statusClass(product)">{{ product.status }}</span>
+                  </td>
+                  <td>
+                    <span class="adm-badge" [class.adm-badge--success]="product.available" [class.adm-badge--danger]="!product.available">
+                      {{ product.available ? 'Yes' : 'No' }}
+                    </span>
+                  </td>
+                  <td class="row-actions">
+                    <button type="button" class="adm-btn adm-btn--sm btn-edit" (click)="edit(product)">Edit</button>
+                    <button type="button" class="adm-btn adm-btn--sm btn-edit" (click)="openAdjust(product)">Stock</button>
+                    <button type="button" class="adm-btn adm-btn--sm adm-btn--danger btn-edit btn-delete" (click)="remove(product)">Delete</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <app-pager
+          [total]="filtered().length"
+          [page]="currentPage()"
+          [pageSize]="pageSize()"
+          (pageChange)="goTo($event)"
+          (pageSizeChange)="setPageSize($event)"
+        />
+      }
     </div>
 
-    @if (isEditing) {
-      <div class="product-form-panel panel">
-        <h2>
-          {{ !currentProduct.id ? 'Add New Product' : 'Edit Product #' + currentProduct.id }}
-        </h2>
+    @if (formOpen()) {
+      <div class="adm-card product-form-panel">
+        <div class="adm-card-head">
+          <h2 class="adm-card-title">{{ !current.id ? 'Add new product' : 'Edit product #' + current.id!.slice(0, 8) }}</h2>
+        </div>
 
-        <form (ngSubmit)="saveProduct()" class="product-form">
-          <div class="form-row-group">
-            <div class="input-group">
-              <label>Product Name</label>
-              <input
-                type="text"
-                [(ngModel)]="currentProduct.productName"
-                name="productName"
-                required
-              />
+        <form #productForm="ngForm" (ngSubmit)="save(productForm)" class="product-form adm-card-body adm-form" novalidate>
+          <div class="adm-form-grid">
+            <div class="adm-field">
+              <label for="f-name">Product Name</label>
+              <input class="adm-input" id="f-name" type="text" [(ngModel)]="current.productName" name="productName" required />
             </div>
 
-            <div class="input-group">
-              <label>Category</label>
-              <select [(ngModel)]="currentProduct.category" name="category" required>
+            <div class="adm-field">
+              <label for="f-category">Category</label>
+              <select class="adm-select adm-select--full" id="f-category" [(ngModel)]="current.category" name="category" required>
                 @for (cat of categories.slice(1); track cat) {
-                  <option [value]="cat">{{ cat }}</option>
+                  <option [value]="cat">{{ label(cat) }}</option>
                 }
               </select>
             </div>
 
-            @if (currentProduct.category === 'Sweets') {
-              <div class="input-group">
-                <label>Sweet Type</label>
-                <select [(ngModel)]="currentProduct.type" name="type" required>
+            @if (current.category === 'Sweets') {
+              <div class="adm-field">
+                <label for="f-type">Sweet Type</label>
+                <select class="adm-select adm-select--full" id="f-type" [(ngModel)]="current.type" name="type" required>
                   <option value="" disabled>-- Select Sweet Type --</option>
                   @for (type of types; track type) {
                     <option [value]="type">{{ type }}</option>
@@ -106,16 +164,15 @@
             }
           </div>
 
-          <div class="form-row-group">
-            <div class="input-group">
-              <label>Price (₹)</label>
-              <input type="number" step="0.01" [(ngModel)]="currentProduct.price" name="price" required />
+          <div class="adm-form-grid">
+            <div class="adm-field">
+              <label for="f-price">Price (₹)</label>
+              <input class="adm-input" id="f-price" type="number" min="0.01" step="0.01" [(ngModel)]="current.price" name="price" required />
             </div>
 
-            <div class="input-group">
-              <label>Status</label>
-              <select [(ngModel)]="currentProduct.status" name="status" required>
-                <option value="" disabled>-- Select Status --</option>
+            <div class="adm-field">
+              <label for="f-status">Status</label>
+              <select class="adm-select adm-select--full" id="f-status" [(ngModel)]="current.status" name="status" required>
                 <option value="In Stock">In Stock</option>
                 <option value="Low Stock">Low Stock</option>
                 <option value="Out of Stock">Out of Stock</option>
@@ -123,90 +180,146 @@
               </select>
             </div>
 
-            <div class="input-group">
-              <label>Stock Unit</label>
-              <input
-                type="text"
-                [(ngModel)]="currentProduct.stockUnit"
-                name="stockUnit"
-                placeholder="e.g. kg, pcs, box"
-                required
-              />
+            <div class="adm-field">
+              <label for="f-unit">Stock Unit</label>
+              <input class="adm-input" id="f-unit" type="text" [(ngModel)]="current.stockUnit" name="stockUnit" placeholder="e.g. kg, pcs, box" required />
             </div>
           </div>
 
-          <div class="form-row-group">
-            <div class="input-group">
-              <label>
-                {{ currentProduct.id ? 'Current Stock (read-only - use Adjust Stock instead)' : 'Starting Stock' }}
+          <div class="adm-form-grid">
+            <div class="adm-field">
+              <label for="f-stock">
+                {{ current.id ? 'Current Stock (use the Stock button to change it)' : 'Starting Stock' }}
               </label>
-              <input
+              <input class="adm-input"
+                id="f-stock"
                 type="number"
+                min="0"
                 step="0.001"
-                [(ngModel)]="currentProduct.stockQuantity"
+                [(ngModel)]="current.stockQuantity"
                 name="stock"
-                [disabled]="!!currentProduct.id"
+                [disabled]="!!current.id"
                 required
               />
             </div>
 
-            <div class="input-group">
-              <label>Available for sale</label>
-              <select [(ngModel)]="currentProduct.available" name="available">
+            <div class="adm-field">
+              <label for="f-available">Available for sale</label>
+              <select class="adm-select adm-select--full" id="f-available" [(ngModel)]="current.available" name="available">
                 <option [ngValue]="true">Yes</option>
                 <option [ngValue]="false">No</option>
               </select>
             </div>
           </div>
 
-          <div class="input-group">
-            <label>Description</label>
-            <textarea [(ngModel)]="currentProduct.description" name="description" rows="3"></textarea>
+          <div class="adm-field">
+            <label for="f-desc">Description</label>
+            <textarea class="adm-textarea" id="f-desc" [(ngModel)]="current.description" name="description" rows="3"></textarea>
           </div>
 
-          <div class="input-group">
-            <label>Product Image</label>
-            <input
-              type="file"
-              (change)="onFileSelected($event)"
-              name="productImageFile"
-              accept="image/*"
-              class="file-input-custom"
-            />
-            <p class="field-hint">
-              Uploaded once the product is saved. A product can carry more than one photo -
-              editing an existing product and choosing another file adds another image rather
-              than replacing the first.
+          <div class="adm-field">
+            <label for="f-image">Add a photo</label>
+            <input class="adm-input" id="f-image" type="file" (change)="onFileSelected($event)" name="productImageFile" accept="image/*" class="file-input-custom" />
+            <p class="adm-hint">
+              Uploaded once the product is saved. A product can carry several photos - choosing another
+              file adds it rather than replacing the first.
             </p>
+
+            @if (pendingImage(); as pending) {
+              <figure class="preview">
+                <img [src]="pending.previewUrl" alt="Preview of the photo you selected" width="120" height="120" />
+                <figcaption>{{ pending.file.name }}</figcaption>
+              </figure>
+            }
+
+            @if (current.images?.length) {
+              <ul class="image-list" aria-label="Current photos">
+                @for (image of current.images; track image.id) {
+                  <li>
+                    <img [src]="imageUrl(image.id)" alt="" width="72" height="72" loading="lazy" appImgFallback />
+                    @if (image.primary) {
+                      <span class="primary-tag">Main</span>
+                    }
+                    <button type="button" class="remove-image" aria-label="Remove this photo" (click)="removeImage(image.id)">✕</button>
+                  </li>
+                }
+              </ul>
+            }
           </div>
 
-          <div class="form-row-group date-group">
-            <div class="input-group">
-              <label>Manufacture Date</label>
-              <input
-                type="date"
-                [(ngModel)]="currentProduct.manufactureDate"
-                name="manufactureDate"
-                required
-              />
+          <div class="adm-form-grid">
+            <div class="adm-field">
+              <label for="f-mfg">Manufacture Date</label>
+              <input class="adm-input" id="f-mfg" type="date" [(ngModel)]="current.manufactureDate" name="manufactureDate" required />
             </div>
-            <div class="input-group">
-              <label>Expiration Date</label>
-              <input
-                type="date"
-                [(ngModel)]="currentProduct.expiryDate"
-                name="expiryDate"
-                required
-              />
+            <div class="adm-field">
+              <label for="f-exp">Expiration Date</label>
+              <input class="adm-input" id="f-exp" type="date" [(ngModel)]="current.expiryDate" name="expiryDate" required />
             </div>
           </div>
 
-          <div class="form-actions">
-            <button type="submit" class="btn btn-save" [disabled]="isUploading">Save Changes</button>
-            <button type="button" class="btn btn-cancel" (click)="isEditing = false">Cancel</button>
+          <div class="adm-form-actions">
+            <button type="button" class="adm-btn btn-cancel" (click)="closeForm()">Cancel</button>
+            <button type="submit" class="adm-btn adm-btn--primary btn-save" [disabled]="saving()">
+              {{ saving() ? 'Saving…' : 'Save changes' }}
+            </button>
           </div>
         </form>
       </div>
     }
   </div>
+
+  @if (adjusting(); as target) {
+    <div class="adm-overlay" (click)="closeAdjust()">
+      <div class="adm-modal dialog" role="dialog" aria-modal="true" aria-labelledby="adjust-title" (click)="$event.stopPropagation()">
+        <h2 id="adjust-title">{{ adjustTitle() }}</h2>
+        @if (target !== 'bulk') {
+          <p class="current-stock">Current stock: <strong>{{ target.stockQuantity | number: '1.0-3' }} {{ target.stockUnit }}</strong></p>
+        }
+
+        <form #adjustForm="ngForm" (ngSubmit)="applyAdjust(adjustForm)" novalidate>
+          <div class="adm-field">
+            <label for="adj-qty">Change (+ adds stock, − removes it)</label>
+            <input class="adm-input" id="adj-qty" type="number" step="0.001" name="changeQty" required [(ngModel)]="adjust.changeQty" placeholder="e.g. 25 or -2.5" />
+          </div>
+          <div class="adm-field">
+            <label for="adj-reason">Reason</label>
+            <select class="adm-select adm-select--full" id="adj-reason" name="reason" [(ngModel)]="adjust.reason">
+              @for (r of stockReasons; track r.value) {
+                <option [value]="r.value">{{ r.label }}</option>
+              }
+            </select>
+          </div>
+
+          @if (target !== 'bulk') {
+            <h3 class="ledger-title">Recent stock movements</h3>
+            @if (ledgerLoading()) {
+              <p class="adm-muted">Loading…</p>
+            } @else if (ledger().length === 0) {
+              <p class="adm-muted">No movements recorded yet.</p>
+            } @else {
+              <ul class="ledger">
+                @for (entry of ledger(); track entry.id) {
+                  <li>
+                    <span class="ledger-qty" [class.ledger-qty--out]="entry.changeQty < 0">
+                      {{ entry.changeQty > 0 ? '+' : '' }}{{ entry.changeQty | number: '1.0-3' }}
+                    </span>
+                    <span>{{ entry.reason }}</span>
+                    <span class="ledger-date">{{ entry.createdAt | date: 'short' }}</span>
+                  </li>
+                }
+              </ul>
+            }
+          }
+
+          <div class="adm-form-actions">
+            <button type="button" class="adm-btn btn-cancel" (click)="closeAdjust()">Cancel</button>
+            <button type="submit" class="adm-btn adm-btn--primary btn-save" [disabled]="adjustingSaving()">
+              {{ adjustingSaving() ? 'Applying…' : 'Apply' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
 </div>

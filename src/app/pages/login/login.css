@@ -5,7 +5,7 @@
 :host {
   display: block;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  color: #1e293b;
+  color: var(--pd-text);
 }
 
 /* Vibrant warm backdrop matching the signup page */
@@ -18,14 +18,12 @@
   padding: 40px 20px;
   position: relative;
   overflow: hidden;
-  background-color: #fcf8f2;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(251, 191, 36, 0.25) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(249, 115, 22, 0.2) 0px, transparent 50%);
+  background-color: var(--pd-bg);
 }
 
-/* Ambient floating light orbs */
+/* Ambient floating light orbs (kept out of the calmer palette) */
 .glow-orb {
+  display: none;
   position: absolute;
   border-radius: 50%;
   filter: blur(70px);
@@ -96,7 +94,7 @@
   align-items: center;
   width: 72px;
   height: 72px;
-  background: #ffffff;
+  background: var(--pd-white);
   border-radius: 50%;
   box-shadow: 0 4px 12px rgba(0,0,0,0.06), 0 0 0 4px rgba(253, 230, 138, 0.3);
   margin-bottom: 20px;
@@ -110,7 +108,7 @@
 }
 
 .brand-header h2 {
-  color: #0f172a;
+  color: var(--pd-text);
   font-size: 1.8em;
   font-weight: 800;
   margin: 0 0 8px 0;
@@ -118,7 +116,7 @@
 }
 
 .intro-text {
-  color: #64748b;
+  color: var(--pd-slate);
   font-size: 0.95em;
   line-height: 1.5;
   margin: 0;
@@ -145,7 +143,7 @@
 }
 
 .input-group label {
-  color: #334155;
+  color: var(--pd-text);
   font-weight: 600;
   font-size: 0.85em;
   margin-bottom: 6px;
@@ -162,7 +160,7 @@
   border: 1.5px solid #e2d9cc;
   border-radius: 12px;
   background-color: #fdfbf7;
-  color: #0f172a;
+  color: var(--pd-text);
   font-size: 0.95em;
   transition: all 0.2s ease;
 }
@@ -172,14 +170,14 @@
 }
 
 .auth-form input:hover {
-  border-color: #cbd5e1;
+  border-color: var(--pd-gray-300);
 }
 
 .auth-form input:focus {
   outline: none;
-  background-color: #ffffff;
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.22);
+  background-color: var(--pd-white);
+  border-color: var(--pd-primary);
+  box-shadow: 0 0 0 3px rgb(180 95 6 / 18%);
 }
 
 /* --- BUTTONS & LINKS --- */
@@ -188,8 +186,8 @@
   margin-top: 8px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
-  color: #ffffff;
+  background: var(--pd-primary);
+  color: var(--pd-white);
   font-size: 1rem;
   font-weight: 700;
   display: flex;
@@ -197,7 +195,7 @@
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.35);
+  box-shadow: 0 6px 18px rgb(180 95 6 / 28%);
   transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
 }
 
@@ -208,8 +206,8 @@
 }
 
 .btn-submit:hover {
-  filter: brightness(1.05);
-  box-shadow: 0 8px 24px rgba(234, 88, 12, 0.45);
+  background: var(--pd-primary-dark);
+  box-shadow: 0 8px 24px rgb(180 95 6 / 38%);
   transform: translateY(-2px);
 }
 
@@ -222,7 +220,7 @@
 }
 
 .forgot-link {
-  color: #ea580c;
+  color: var(--pd-primary);
   font-size: 0.8em;
   font-weight: 600;
   text-decoration: none;
@@ -230,7 +228,7 @@
 }
 
 .forgot-link:hover {
-  color: #b45309;
+  color: var(--pd-primary-dark);
   text-decoration: underline;
 }
 
@@ -238,18 +236,18 @@
 .switch-cta {
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--pd-border);
   text-align: center;
 }
 
 .switch-cta p {
-  color: #64748b;
+  color: var(--pd-slate);
   font-size: 0.9em;
   margin: 0 0 8px 0;
 }
 
 .switch-link {
-  color: #ea580c;
+  color: var(--pd-primary);
   font-weight: 700;
   text-decoration: none;
   font-size: 0.95em;
@@ -257,7 +255,7 @@
 }
 
 .switch-link:hover {
-  color: #b45309;
+  color: var(--pd-primary-dark);
   text-decoration: underline;
 }
 
@@ -275,4 +273,51 @@
   .brand-header h2 {
     font-size: 1.6em;
   }
+}
+.form-alert {
+  margin-bottom: var(--pd-space-4);
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  width: 100%;
+  padding-right: 4.5rem;
+}
+
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 0.5rem;
+  transform: translateY(-50%);
+  padding: 0.25rem 0.6rem;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--pd-primary-dark);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-submit:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
+/* Used by the forgot-password and reset-password pages, which share this stylesheet. */
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  color: #ffb4b4;
+  font-size: 0.8rem;
+}
+
+a.btn-submit {
+  text-decoration: none;
+  text-align: center;
+  justify-content: center;
 }

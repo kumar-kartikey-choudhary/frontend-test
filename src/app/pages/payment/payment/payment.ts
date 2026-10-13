@@ -1,172 +1,216 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { CartService } from '../../../service/cart/CartService';
 import { CouponService } from '../../../service/coupon/coupon-service';
 import { ProductService } from '../../../service/product/product-service';
 import { PaymentService } from '../../../service/payment/payment-service';
+import { AddressService } from '../../../service/address/address-service';
+import { UserService } from '../../../service/user/user-service';
+import type { SavedPaymentMethodDto } from '../../../model/payment';
 import { ToastService } from '../../../core/services/toast.service';
-import { CartItemDto } from '../../../model/cart.model';
-import type { CouponDto } from '../../../model/order.model';
+import type { CartItemDto } from '../../../model/cart.model';
+import type { AddressDto } from '../../../model/address.model';
+import type { CouponDto, DeliveryAddress } from '../../../model/order.model';
 import type { PaymentMethod } from '../../../model/payment';
+import { ImgFallbackDirective } from '../../../shared/directives/img-fallback.directive';
+import { PLACEHOLDER_IMAGE } from '../../../shared/uti/image.util';
 
 /**
- * The order is only placed from here, once a payment method is chosen - see
- * placeOrder(). The cart page just reviews items/coupon and hands off to this
- * page (proceedToPayment()); it no longer creates the order itself.
+ * The order is only placed from here, once a delivery address and payment method are chosen -
+ * see placeOrder(). The cart page just reviews items/coupon and hands off to this page.
  */
 @Component({
   selector: 'app-payment',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [FormsModule, RouterLink, DecimalPipe, ImgFallbackDirective],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './payment.html',
   styleUrls: ['./payment.css'],
 })
 export class Payment implements OnInit {
-  cartItems: CartItemDto[] = [];
-  subtotalAmount = 0;
-  discountAmount = 0;
-  totalAmount = 0;
-  totalCount = 0;
-  isLoading = true;
-  isPlacingOrder = false;
+  private readonly cart = inject(CartService);
+  private readonly couponService = inject(CouponService);
+  private readonly productService = inject(ProductService);
+  private readonly paymentService = inject(PaymentService);
+  private readonly addressService = inject(AddressService);
+  private readonly userService = inject(UserService);
+  private readonly toast = inject(ToastService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
-  // Carried over from the cart page via ?coupon=CODE - re-fetched here (not trusted blindly)
-  // so the discount preview shown matches what the cart page showed, and so a customer who
-  // opens this page directly with a stale/invalid code in the URL gets a clean error instead
-  // of a silently wrong total.
-  appliedCoupon: CouponDto | null = null;
+  protected readonly items = signal<CartItemDto[]>([]);
+  protected readonly addresses = signal<AddressDto[]>([]);
+  protected readonly selectedAddressId = signal<string | null>(null);
+  protected readonly loading = signal(true);
+  protected readonly failed = signal(false);
+  protected readonly placingOrder = signal(false);
 
-  selectedPaymentMethod: PaymentMethod = 'UPI';
-  saveCard = false;
+  // Carried over from the cart page via ?coupon=CODE - re-fetched here (not trusted blindly) so
+  // the discount preview matches the cart page, and a stale code in the URL fails cleanly.
+  protected readonly appliedCoupon = signal<CouponDto | null>(null);
 
-  constructor(
-    private cartService: CartService,
-    private couponService: CouponService,
-    private productService: ProductService,
-    private paymentService: PaymentService,
-    private toastService: ToastService,
-    private router: Router,
-    private route: ActivatedRoute,
-  ) {}
+  protected readonly paymentMethod = signal<PaymentMethod>('UPI');
+  protected saveCard = false;
+
+  /** Cards the customer saved earlier; empty if none (or if the list couldn't be loaded). */
+  protected readonly savedCards = signal<SavedPaymentMethodDto[]>([]);
+  /** The saved card chosen for this payment, or null to enter a new one. */
+  protected readonly selectedCardId = signal<string | null>(null);
+
+  private contactPhone: string | undefined;
+
+  protected readonly totalCount = computed(() =>
+    this.items().reduce((sum, item) => sum + (item.quantity || 0), 0),
+  );
+  protected readonly subtotal = computed(() =>
+    this.items().reduce((sum, item) => sum + Number(item.subtotal ?? item.pricePerUnit * item.quantity), 0),
+  );
+  protected readonly discount = computed(() => {
+    const coupon = this.appliedCoupon();
+    return coupon ? this.couponService.estimateDiscount(coupon, this.subtotal()) : 0;
+  });
+  protected readonly total = computed(() => Math.max(0, this.subtotal() - this.discount()));
+  protected readonly selectedAddress = computed(
+    () => this.addresses().find((a) => a.id === this.selectedAddressId()) ?? null,
+  );
+
+  /** Where "add an address" sends the customer, so they land back here afterwards. */
+  protected addAddressQuery: Record<string, string> = { tab: 'addresses', returnUrl: '/payment' };
 
   ngOnInit(): void {
-    const couponCode = this.route.snapshot.queryParamMap.get('coupon');
-    this.loadCart(couponCode);
+    const coupon = this.route.snapshot.queryParamMap.get('coupon');
+    if (coupon) {
+      this.addAddressQuery = {
+        tab: 'addresses',
+        returnUrl: `/payment?coupon=${encodeURIComponent(coupon)}`,
+      };
+    }
+    this.load(coupon);
   }
 
-  private loadCart(couponCode: string | null): void {
-    this.isLoading = true;
-    this.cartService.getCart().subscribe({
-      next: (items) => {
-        this.cartItems = items || [];
+  protected load(couponCode: string | null = this.route.snapshot.queryParamMap.get('coupon')): void {
+    this.loading.set(true);
+    this.failed.set(false);
 
-        if (this.cartItems.length === 0) {
-          this.toastService.error('Your cart is empty.');
+    forkJoin({
+      items: this.cart.getCart(),
+      addresses: this.addressService.getAll().pipe(catchError(() => of([] as AddressDto[]))),
+      phone: this.userService.me().pipe(catchError(() => of(null))),
+      cards: this.paymentService.getSavedMethods().pipe(catchError(() => of([] as SavedPaymentMethodDto[]))),
+      coupon: couponCode ? this.couponService.find(couponCode).pipe(catchError(() => of(null))) : of(null),
+    }).subscribe({
+      next: ({ items, addresses, phone, coupon, cards }) => {
+        if (!items || items.length === 0) {
+          this.toast.error('Your cart is empty.');
           this.router.navigate(['/cart']);
           return;
         }
-
-        this.calculateTotals();
-
-        if (couponCode) {
-          this.couponService.find(couponCode).subscribe({
-            next: (coupon) => {
-              this.appliedCoupon = coupon;
-              this.calculateTotals();
-              this.isLoading = false;
-            },
-            error: () => {
-              // Coupon from the URL no longer valid - proceed without it rather than blocking
-              // checkout entirely.
-              this.appliedCoupon = null;
-              this.isLoading = false;
-            },
-          });
-        } else {
-          this.isLoading = false;
-        }
+        this.items.set(items);
+        this.addresses.set(addresses);
+        this.contactPhone = phone?.phoneNumber || undefined;
+        this.savedCards.set(cards);
+        this.selectedCardId.set((cards.find((c) => c.isDefault) ?? cards[0])?.id ?? null);
+        // An invalid code in the URL is dropped rather than blocking checkout.
+        this.appliedCoupon.set(coupon);
+        const preferred = addresses.find((a) => a.isDefault) ?? addresses[0];
+        this.selectedAddressId.set(preferred?.id ?? null);
+        this.loading.set(false);
       },
       error: () => {
-        this.toastService.error('Failed to load your cart.');
-        this.isLoading = false;
+        this.failed.set(true);
+        this.loading.set(false);
       },
     });
   }
 
-  imageUrlFor(item: CartItemDto): string {
-    return item.productImageId
-      ? this.productService.imageUrl(item.productImageId)
-      : 'assets/images/placeholder.png';
+  protected imageUrlFor(item: CartItemDto): string {
+    return item.productImageId ? this.productService.imageUrl(item.productImageId) : PLACEHOLDER_IMAGE;
   }
 
-  private calculateTotals(): void {
-    this.totalCount = this.cartItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
-    this.subtotalAmount = this.cartItems.reduce((acc, item) => {
-      const lineSubtotal = item.subtotal != null ? item.subtotal : item.pricePerUnit * item.quantity;
-      return acc + Number(lineSubtotal);
-    }, 0);
-
-    this.discountAmount = this.appliedCoupon
-      ? this.couponService.estimateDiscount(this.appliedCoupon, this.subtotalAmount)
-      : 0;
-    this.totalAmount = Math.max(0, this.subtotalAmount - this.discountAmount);
-  }
-
-  backToCart(): void {
+  protected backToCart(): void {
     this.router.navigate(['/cart']);
+  }
+
+  protected selectCard(id: string | null): void {
+    this.selectedCardId.set(id);
+  }
+
+  protected cardLabel(card: SavedPaymentMethodDto): string {
+    const network = card.cardNetwork === 'OTHER' ? 'Card' : card.cardNetwork.charAt(0) + card.cardNetwork.slice(1).toLowerCase();
+    const month = String(card.cardExpiryMonth ?? '').padStart(2, '0');
+    const year = String(card.cardExpiryYear ?? '').slice(-2);
+    return `${network} ending ${card.cardLastFour}` + (card.cardExpiryMonth ? ` · expires ${month}/${year}` : '');
+  }
+
+  protected selectMethod(method: PaymentMethod): void {
+    this.paymentMethod.set(method);
+  }
+
+  private toDeliveryAddress(address: AddressDto): DeliveryAddress {
+    return {
+      label: address.label,
+      line1: address.line1,
+      line2: address.line2 || undefined,
+      city: address.city,
+      state: address.state,
+      pincode: address.pincode,
+      landmark: address.landmark || undefined,
+      contactPhone: this.contactPhone,
+    };
   }
 
   /**
    * Places the order (via order-service) and then, for anything other than COD, runs the
-   * Razorpay Checkout flow against payment-service. See OrderServiceImpl.create()'s comment
-   * for why order creation and payment are decoupled backend-side - a failure below means the
-   * payment didn't go through, not that the order failed.
+   * Razorpay Checkout flow against payment-service. A failure after the order exists means the
+   * payment didn't go through, not that the order failed - the customer can retry from My Orders.
    */
-  placeOrder(): void {
-    if (this.isPlacingOrder || this.cartItems.length === 0) return;
+  protected placeOrder(): void {
+    const address = this.selectedAddress();
+    if (this.placingOrder() || this.items().length === 0) return;
+    if (!address) {
+      this.toast.error('Please choose a delivery address first.');
+      return;
+    }
 
-    this.isPlacingOrder = true;
+    this.placingOrder.set(true);
+    const method = this.paymentMethod();
 
-    this.cartService.placeOrder(this.appliedCoupon?.code).subscribe({
+    this.cart.placeOrder(this.appliedCoupon()?.code, this.toDeliveryAddress(address)).subscribe({
       next: async (order) => {
-        // Order is placed and stock reserved at this point regardless of payment outcome.
-        // Clear the cart now; a payment failure below doesn't undo the order.
-        this.cartService.syncCartFromBackend();
+        // The order exists and stock is reserved whatever happens to the payment from here.
+        this.cart.syncCartFromBackend();
 
-        if (this.selectedPaymentMethod === 'COD') {
-          this.isPlacingOrder = false;
-          this.toastService.success('Order placed! Pay in cash on delivery.');
+        if (method === 'COD') {
+          this.placingOrder.set(false);
+          this.toast.success('Order placed! Pay in cash on delivery.');
           this.router.navigate(['/orders']);
           return;
         }
 
         try {
-          await this.paymentService.payForOrder(order.id, order.totalAmount, this.selectedPaymentMethod, {
+          await this.paymentService.payForOrder(order.id, order.totalAmount, method, {
             customerName: order.username,
+            contact: this.contactPhone,
             saveCard: this.saveCard,
+            savedPaymentMethodId: this.selectedCardId() ?? undefined,
           });
-          this.isPlacingOrder = false;
-          this.toastService.success('Payment successful! Your order is confirmed.');
-          this.router.navigate(['/orders']);
-        } catch (paymentError: any) {
-          // The order already exists and stock is reserved - only the payment step failed or
-          // was cancelled. Don't imply the order itself failed.
-          this.isPlacingOrder = false;
-          this.toastService.error(
-            `Order placed, but payment didn't go through (${paymentError?.message || 'cancelled'}). ` +
-              'You can retry payment from My Orders.',
+          this.toast.success('Payment successful! Your order is confirmed.');
+        } catch (paymentError: unknown) {
+          const reason = paymentError instanceof Error ? paymentError.message : 'cancelled';
+          this.toast.error(
+            `Order placed, but the payment didn't go through (${reason}). ` +
+              'You can pay again from My Orders.',
           );
-          this.router.navigate(['/orders']);
         }
+        this.placingOrder.set(false);
+        this.router.navigate(['/orders']);
       },
-      error: (err) => {
-        console.error('Order placement failed:', err);
-        const message = err?.error?.message || 'Failed to place order. Some items may be out of stock.';
-        this.toastService.error(message);
-        this.isPlacingOrder = false;
-      },
+      // The interceptor already showed the server's message (e.g. which item is out of stock).
+      error: () => this.placingOrder.set(false),
     });
   }
 }

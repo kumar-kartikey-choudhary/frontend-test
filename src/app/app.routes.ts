@@ -1,6 +1,18 @@
-import { Routes } from '@angular/router';
+import { Route, Routes } from '@angular/router';
+import * as CATALOGS from './pages/product-catalog/catalog.config';
 import { authGuardGuard } from './guard/auth-guard-guard'; // admin only
 import { customerGuard } from './guard/customer-guard'; // any logged-in user
+
+/** A category listing: the shared ProductCatalog page fed with one CatalogConfig via route data. */
+function catalogRoute(path: string, title: string, config: keyof typeof CATALOGS): Route {
+  return {
+    path,
+    title: `${title} | Pratik Dairy & Sweets`,
+    data: { config: CATALOGS[config] },
+    loadComponent: () =>
+      import('./pages/product-catalog/product-catalog').then((m) => m.ProductCatalog),
+  };
+}
 
 /**
  * All routes are lazy-loaded (including login/signup, which used to be eager
@@ -12,6 +24,21 @@ export const routes: Routes = [
     path: 'login',
     title: 'Login | Pratik Dairy & Sweets',
     loadComponent: () => import('./pages/login/login').then((m) => m.Login),
+  },
+  {
+    path: 'forgot-password',
+    title: 'Forgot your password? | Pratik Dairy & Sweets',
+    loadComponent: () => import('./pages/forgot-password/forgot-password').then((m) => m.ForgotPassword),
+  },
+  {
+    path: 'reset-password',
+    title: 'Choose a new password | Pratik Dairy & Sweets',
+    loadComponent: () => import('./pages/reset-password/reset-password').then((m) => m.ResetPassword),
+  },
+  {
+    path: 'verify-email',
+    title: 'Confirm your email | Pratik Dairy & Sweets',
+    loadComponent: () => import('./pages/verify-email/verify-email').then((m) => m.VerifyEmail),
   },
   {
     path: 'signup',
@@ -45,36 +72,20 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/contact/contact').then((m) => m.Contact),
       },
 
-      // --- category pages (each now has its own document title) ---
+      // --- category pages: one component, configured per route (see catalog.config.ts) ---
+      catalogRoute('products/dairy', 'Dairy Products', 'DAIRY_CATALOG'),
+      catalogRoute('products/sweets', 'Sweets Menu', 'SWEETS_CATALOG'),
+      catalogRoute('products/drink', 'Cold Drinks', 'DRINKS_CATALOG'),
+      catalogRoute('products/snacks', 'Snacks & Namkeens', 'SNACKS_CATALOG'),
+      catalogRoute('products/other', 'More Products', 'OTHER_CATALOG'),
+      // Old/mistyped links used to land on the 404 page.
+      { path: 'products/colddrinks', redirectTo: 'products/drink' },
+      { path: 'products/cold-drinks', redirectTo: 'products/drink' },
       {
-        path: 'products/dairy',
-        title: 'Dairy Products | Pratik Dairy & Sweets',
+        // The title is set by the page itself once the product has loaded.
+        path: 'products/item/:id',
         loadComponent: () =>
-          import('./pages/dairy-products/dairy-products').then((m) => m.DairyProducts),
-      },
-      {
-        path: 'products/sweets',
-        title: 'Sweets Menu | Pratik Dairy & Sweets',
-        loadComponent: () => import('./pages/sweets-menu/sweets-menu').then((m) => m.SweetsMenu),
-      },
-      {
-        path: 'products/drink',
-        title: 'Cold Drinks | Pratik Dairy & Sweets',
-        loadComponent: () => import('./pages/cold-drinks/cold-drinks').then((m) => m.ColdDrinks),
-      },
-      {
-        path: 'products/snacks',
-        title: 'Snacks & Namkeens | Pratik Dairy & Sweets',
-        loadComponent: () =>
-          import('./pages/snacks-and-namkeens/snacks-and-namkeens').then(
-            (m) => m.SnacksAndNamkeens,
-          ),
-      },
-      {
-        path: 'products/other',
-        title: 'Other Products | Pratik Dairy & Sweets',
-        loadComponent: () =>
-          import('./pages/other-products/other-products').then((m) => m.OtherProducts),
+          import('./pages/product-detail/product-detail').then((m) => m.ProductDetail),
       },
 
       // --- authenticated ---
@@ -96,6 +107,18 @@ export const routes: Routes = [
         title: 'My Orders | Pratik Dairy & Sweets',
         canActivate: [customerGuard],
         loadComponent: () => import('./pages/my-orders/my-orders').then((m) => m.MyOrders),
+      },
+      {
+        path: 'wishlist',
+        title: 'My Wishlist | Pratik Dairy & Sweets',
+        canActivate: [customerGuard],
+        loadComponent: () => import('./pages/wishlist/wishlist').then((m) => m.Wishlist),
+      },
+      {
+        path: 'orders/:id/invoice',
+        title: 'Invoice | Pratik Dairy & Sweets',
+        canActivate: [customerGuard],
+        loadComponent: () => import('./pages/invoice/invoice').then((m) => m.Invoice),
       },
       {
         path: 'account',
@@ -141,6 +164,24 @@ export const routes: Routes = [
           import('./admin/pages/payment-management/payment-management').then(
             (m) => m.PaymentManagement,
           ),
+      },
+      {
+        path: 'coupons',
+        title: 'Coupons | Pratik Dairy',
+        loadComponent: () =>
+          import('./admin/pages/coupon-management/coupon-management').then((m) => m.CouponManagement),
+      },
+      {
+        path: 'notifications',
+        title: 'Send Notifications | Pratik Dairy',
+        loadComponent: () =>
+          import('./admin/pages/notification-management/notification-management').then((m) => m.NotificationManagement),
+      },
+      {
+        path: 'messages',
+        title: 'Customer Messages | Pratik Dairy',
+        loadComponent: () =>
+          import('./admin/pages/message-management/message-management').then((m) => m.MessageManagement),
       },
       {
         path: 'users',

@@ -1,0 +1,115 @@
+<div class="page">
+  @if (loading()) {
+    <div class="layout" aria-busy="true" aria-label="Loading product">
+      <div class="pd-skeleton pd-skeleton--dark sk-image"></div>
+      <div class="sk-text">
+        <div class="pd-skeleton pd-skeleton--dark sk-line sk-line--lg"></div>
+        <div class="pd-skeleton pd-skeleton--dark sk-line"></div>
+        <div class="pd-skeleton pd-skeleton--dark sk-line"></div>
+      </div>
+    </div>
+  } @else if (notFound()) {
+    <div class="state">
+      <h1>We couldn't find that product</h1>
+      <p>It may have been removed or the link is out of date.</p>
+      <a routerLink="/products" class="link">Browse all products</a>
+    </div>
+  } @else if (failed()) {
+    <div class="state" role="alert">
+      <h1>Something went wrong</h1>
+      <p>We couldn't load this product right now.</p>
+      <button type="button" class="link" (click)="reload()">Try again</button>
+    </div>
+  } @else if (product(); as p) {
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <a routerLink="/products">Products</a>
+      <span aria-hidden="true">/</span>
+      <a [routerLink]="categoryLink()">{{ categoryName() }}</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{{ p.productName }}</span>
+    </nav>
+
+    <div class="layout">
+      <section class="gallery" aria-label="Product photos">
+        <img
+          class="main"
+          [src]="mainImage()"
+          [alt]="p.productName"
+          width="640"
+          height="480"
+          appImgFallback
+        />
+        @if (images().length > 1) {
+          <ul class="thumbs">
+            @for (image of images(); track image.id) {
+              <li>
+                <button
+                  type="button"
+                  class="thumb"
+                  [attr.aria-label]="'Show photo ' + ($index + 1) + ' of ' + images().length"
+                  [attr.aria-current]="mainImage() === imageUrl(image.id)"
+                  (click)="selectImage(image.id)"
+                >
+                  <img [src]="imageUrl(image.id)" alt="" width="72" height="72" loading="lazy" appImgFallback />
+                </button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="info">
+        <a [routerLink]="categoryLink()" class="category">{{ categoryName() }}</a>
+        <div class="title-row">
+          <h1>{{ p.productName }}</h1>
+          <app-wishlist-button [productId]="p.id" variant="inline" />
+        </div>
+        @if (rating(); as r) {
+          <p class="rating"><a href="#reviews-title"><app-star-rating [value]="r.average" [count]="r.count" /></a></p>
+        }
+
+        @if (stockNote(); as note) {
+          <p class="stock stock--{{ note.tone }}" role="status">{{ note.text }}</p>
+        }
+
+        @if (p.description) {
+          <p class="description">{{ p.description }}</p>
+        }
+
+        <app-product-purchase [product]="p" size="detail" />
+
+        <dl class="facts">
+          @if (p.manufactureDate) {
+            <div>
+              <dt>Made on</dt>
+              <dd>{{ p.manufactureDate | date: 'mediumDate' }}</dd>
+            </div>
+          }
+          @if (p.expiryDate) {
+            <div>
+              <dt>Best before</dt>
+              <dd>{{ p.expiryDate | date: 'mediumDate' }}</dd>
+            </div>
+          }
+          <div>
+            <dt>Sold by</dt>
+            <dd>{{ p.stockUnit }}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+
+    <app-product-reviews [productId]="p.id" />
+
+    @if (related().length) {
+      <section class="related" aria-labelledby="related-title">
+        <h2 id="related-title">You may also like</h2>
+        <div class="related-grid">
+          @for (item of related(); track item.id) {
+            <app-product-card [product]="item" />
+          }
+        </div>
+      </section>
+    }
+  }
+</div>

@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable, firstValueFrom } from 'rxjs';
+import { Observable, firstValueFrom, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import type {
   InitiatePaymentRequest,
@@ -38,7 +38,10 @@ export class PaymentService {
   }
 
   getSavedMethods(): Observable<SavedPaymentMethodDto[]> {
-    return this.http.get<SavedPaymentMethodDto[]>(`${this.apiUrl}/saved-methods`);
+    // Same Lombok quirk as addresses: a backend `boolean isDefault` is serialised as "default".
+    return this.http
+      .get<(SavedPaymentMethodDto & { default?: boolean })[]>(`${this.apiUrl}/saved-methods`)
+      .pipe(map((list) => list.map((m) => ({ ...m, isDefault: m.isDefault ?? m.default ?? false }))));
   }
 
   deleteSavedMethod(id: string): Observable<void> {
@@ -72,7 +75,7 @@ export class PaymentService {
    */
   private openCheckout(
     init: InitiatePaymentResponse,
-    options: { name: string; description: string; email?: string; contact?: string; prefillToken?: string },
+    options: { name: string; description: string; email?: string; contact?: string; remember?: boolean },
   ): Promise<RazorpayCheckoutResponse> {
     return new Promise((resolve, reject) => {
       const rzp = new Razorpay({
@@ -90,6 +93,11 @@ export class PaymentService {
         // choice actually has a token to pull - see RazorpayGatewayClient.tokenizeCard() on the
         // backend, which reads this back via the customer's token list.
         recurring: '0',
+        // Opened under the customer the cards live on: Razorpay then lists that customer's saved cards,
+        // and (with remember_customer) offers to keep a newly entered one.
+        ...(init.gatewayCustomerId
+          ? { customer_id: init.gatewayCustomerId, remember_customer: options.remember ?? false }
+          : {}),
         handler: (response: RazorpayCheckoutResponse) => resolve(response),
         modal: {
           ondismiss: () => reject(new Error('Payment cancelled')),
@@ -112,11 +120,22 @@ export class PaymentService {
     orderId: string,
     amount: number,
     method: PaymentMethod,
-    options: { customerName: string; email?: string; contact?: string; saveCard?: boolean } = {
+    options: {
+      customerName: string;
+      email?: string;
+      contact?: string;
+      saveCard?: boolean;
+      /** Pay with a card the customer saved earlier (card payments only). */
+      savedPaymentMethodId?: string;
+    } = {
       customerName: 'Pratik Dairy Customer',
     },
   ): Promise<PaymentTransactionDto | null> {
-    const initResponse = await firstValueFrom(this.initiate({ orderId, amount, method }));
+    const useSaved = method === 'CARD' ? options.savedPaymentMethodId : undefined;
+    const saveCard = method === 'CARD' && !useSaved && !!options.saveCard;
+    const initResponse = await firstValueFrom(
+      this.initiate({ orderId, amount, method, saveCard, savedPaymentMethodId: useSaved }),
+    );
 
     // COD needs no gateway step - the transaction is already recorded PENDING on the backend.
     if (method === 'COD' || !initResponse.gatewayOrderId) {
@@ -130,6 +149,7 @@ export class PaymentService {
       description: `Order #${orderId}`,
       email: options.email,
       contact: options.contact,
+      remember: saveCard,
     });
 
     return firstValueFrom(
@@ -138,7 +158,7 @@ export class PaymentService {
         razorpayOrderId: checkoutResult.razorpay_order_id,
         razorpayPaymentId: checkoutResult.razorpay_payment_id,
         razorpaySignature: checkoutResult.razorpay_signature,
-        saveCard: method === 'CARD' && !!options.saveCard,
+        saveCard,
       }),
     );
   }

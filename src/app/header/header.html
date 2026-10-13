@@ -1,6 +1,9 @@
 <div class="top-ticker">
   <p class="ticker-content">
-    <span>✨ **Pratik Dairy & Sweets: The Taste of Tradition** | Fresh Milk & Paneer Available Daily | Order Your Festive Sweets Today! ✨</span>
+    <span
+      >✨ Pratik Dairy &amp; Sweets: The Taste of Tradition | Fresh Milk &amp; Paneer Available Daily |
+      Order Your Festive Sweets Today! ✨</span
+    >
   </p>
 </div>
 
@@ -16,14 +19,14 @@
       <span class="tagline">Freshness & Tradition</span>
     </a>
 
-    <nav class="desktop-nav">
+    <nav class="desktop-nav" aria-label="Main">
       <ul>
         @for (item of navLinks; track item.label) {
           <li>
             <a
               [routerLink]="item.link"
               routerLinkActive="active-link"
-              [routerLinkActiveOptions]="item.link === '/' ? { exact: true } : { exact: false }"
+              [routerLinkActiveOptions]="{ exact: item.link === '/' }"
             >
               {{ item.label }}
             </a>
@@ -33,16 +36,48 @@
     </nav>
 
     <div class="utility-block">
-      <a href="tel:+917000628291" class="phone-link"> 📞 +91 7000628291 </a>
+      <a [href]="phoneHref" class="phone-link"><span aria-hidden="true">📞</span> {{ phone }}</a>
 
       <div class="icon-group">
-        @if (authservice.isLoggedIn()) {
-          <a routerLink="/cart" class="utility-icon cart-icon" (click)="carts()" title="Cart">🛒</a>
-          <a routerLink="/orders" class="utility-icon order-icon" title="Orders">📦</a>
-          <a routerLink="/account" class="utility-icon user-icon" title="Account">
-            <span class="user-avatar">{{ authservice.getUserInitial() }}</span>
+        @if (auth.isLoggedIn()) {
+          <a
+            routerLink="/cart"
+            class="utility-icon cart-icon"
+            [attr.aria-label]="'Cart, ' + cartCount() + (cartCount() === 1 ? ' item' : ' items')"
+          >
+            <span aria-hidden="true">🛒</span>
+            @if (cartCount() > 0) {
+              <span class="badge" aria-hidden="true">{{ cartCount() > 99 ? '99+' : cartCount() }}</span>
+            }
           </a>
-          <button class="logout-btn" (click)="onLogOut()">Logout</button>
+          <a
+            routerLink="/account"
+            [queryParams]="{ tab: 'notifications' }"
+            class="utility-icon bell-icon"
+            [attr.aria-label]="'Notifications, ' + unreadCount() + ' unread'"
+          >
+            <span aria-hidden="true">🔔</span>
+            @if (unreadCount() > 0) {
+              <span class="badge" aria-hidden="true">{{ unreadCount() > 99 ? '99+' : unreadCount() }}</span>
+            }
+          </a>
+          <a
+            routerLink="/wishlist"
+            class="utility-icon wishlist-icon"
+            [attr.aria-label]="'Wishlist, ' + wishlistCount() + (wishlistCount() === 1 ? ' item' : ' items')"
+          >
+            <span aria-hidden="true">♡</span>
+            @if (wishlistCount() > 0) {
+              <span class="badge" aria-hidden="true">{{ wishlistCount() > 99 ? '99+' : wishlistCount() }}</span>
+            }
+          </a>
+          <a routerLink="/orders" class="utility-icon order-icon" aria-label="My orders">
+            <span aria-hidden="true">📦</span>
+          </a>
+          <a routerLink="/account" class="utility-icon user-icon" aria-label="My account">
+            <span class="user-avatar" aria-hidden="true">{{ auth.getUserInitial() }}</span>
+          </a>
+          <button type="button" class="logout-btn" (click)="onLogOut()">Logout</button>
         } @else {
           <a routerLink="/login" class="logout-btn">Login</a>
         }
@@ -51,14 +86,14 @@
   </div>
 
   <!-- Mobile Backdrop Overlay -->
-  @if (isMenuOpen) {
-    <div class="mobile-backdrop" (click)="toggleMenu()"></div>
+  @if (isMenuOpen()) {
+    <div class="mobile-backdrop" (click)="closeMenu()"></div>
   }
 
   <!-- Mobile Bottom Sheet Drawer for Additional Links -->
-  <nav class="mobile-nav bottom-sheet" [class.open]="isMenuOpen">
+  <nav class="mobile-nav bottom-sheet" [class.open]="isMenuOpen()" aria-label="Menu" [attr.aria-hidden]="!isMenuOpen()">
     <div class="mobile-nav-header">
-      <a routerLink="/" class="mobile-logo-link" (click)="toggleMenu()">
+      <a routerLink="/" class="mobile-logo-link" (click)="closeMenu()">
         <img
           src="assets/images/pratik-dairy-logo.png"
           alt="Pratik Dairy & Sweets Logo"
@@ -66,52 +101,71 @@
         />
         <h2>Pratik Dairy & Sweets</h2>
       </a>
-      <button class="close-sheet-btn" (click)="toggleMenu()" aria-label="Close menu">✕</button>
+      <button type="button" class="close-sheet-btn" (click)="closeMenu()" aria-label="Close menu">✕</button>
     </div>
 
     <ul class="mobile-nav-list">
       @for (item of navLinks; track item.label) {
         <li>
-          <a [routerLink]="item.link" (click)="toggleMenu()">{{ item.label }}</a>
+          <a [routerLink]="item.link" (click)="closeMenu()">{{ item.label }}</a>
+        </li>
+      }
+      @if (auth.isLoggedIn()) {
+        <li><a routerLink="/account" (click)="closeMenu()">My Account</a></li>
+        <li>
+          <a routerLink="/account" [queryParams]="{ tab: 'notifications' }" (click)="closeMenu()">
+            Notifications @if (unreadCount() > 0) { ({{ unreadCount() }}) }
+          </a>
         </li>
       }
     </ul>
-    
+
     <div class="mobile-sheet-footer">
-      @if (authservice.isLoggedIn()) { 
-        <button class="mobile-logout-btn" (click)="onLogOut(); toggleMenu()">Logout</button>
+      @if (auth.isLoggedIn()) {
+        <button type="button" class="mobile-logout-btn" (click)="onLogOut(); closeMenu()">Logout</button>
       } @else {
-        <a routerLink="/login" class="mobile-login-btn" (click)="toggleMenu()">Login</a>
+        <a routerLink="/login" class="mobile-login-btn" (click)="closeMenu()">Login</a>
       }
     </div>
   </nav>
 
   <!-- Mobile Bottom App Bar -->
-  <div class="mobile-bottom-app-bar">
+  <nav class="mobile-bottom-app-bar" aria-label="Quick navigation">
     <a routerLink="/" class="nav-item" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">
-      <span class="nav-icon">🏠</span>
+      <span class="nav-icon" aria-hidden="true">🏠</span>
       <span class="nav-label">Home</span>
     </a>
 
-    @if (authservice.isLoggedIn()) {
-      <a routerLink="/cart" class="nav-item" routerLinkActive="active" (click)="carts()">
-        <span class="nav-icon">🛒</span>
-        <span class="nav-label">Cart</span>
+    @if (auth.isLoggedIn()) {
+      <a routerLink="/cart" class="nav-item" routerLinkActive="active">
+        <span class="nav-icon" aria-hidden="true">
+          🛒
+          @if (cartCount() > 0) {
+            <span class="badge">{{ cartCount() > 99 ? '99+' : cartCount() }}</span>
+          }
+        </span>
+        <span class="nav-label">Cart<span class="pd-visually-hidden">, {{ cartCount() }} items</span></span>
       </a>
       <a routerLink="/orders" class="nav-item" routerLinkActive="active">
-        <span class="nav-icon">📦</span>
+        <span class="nav-icon" aria-hidden="true">📦</span>
         <span class="nav-label">Orders</span>
       </a>
     } @else {
       <a routerLink="/login" class="nav-item" routerLinkActive="active">
-        <span class="nav-icon">🔑</span>
+        <span class="nav-icon" aria-hidden="true">🔑</span>
         <span class="nav-label">Login</span>
       </a>
     }
 
-    <button class="nav-item menu-btn" (click)="toggleMenu()" [class.active]="isMenuOpen">
-      <span class="nav-icon">☰</span>
+    <button
+      type="button"
+      class="nav-item menu-btn"
+      (click)="toggleMenu()"
+      [class.active]="isMenuOpen()"
+      [attr.aria-expanded]="isMenuOpen()"
+    >
+      <span class="nav-icon" aria-hidden="true">☰</span>
       <span class="nav-label">Menu</span>
     </button>
-  </div>
+  </nav>
 </header>

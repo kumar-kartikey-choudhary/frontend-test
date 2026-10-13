@@ -5,7 +5,9 @@ interface ProductCategory {
   name: string;
   description: string;
   link: string;
-  imagePath: string;
+  /** Omit for categories without a photo - the card falls back to the emoji. */
+  imagePath?: string;
+  emoji?: string;
 }
 
 @Component({
@@ -37,8 +39,14 @@ export class Products {
     {
       name: 'Cold Drinks',
       description: 'Refreshing chaas, lassi, flavored milk, and chilled beverages.',
-      link: '/products/colddrinks',
+      link: '/products/drink',
       imagePath: 'assets/images/products/cold-drinks.jpg',
+    },
+    {
+      name: 'Bakery & More',
+      description: 'Bakery items and everything else we stock.',
+      link: '/products/other',
+      emoji: '🥐',
     },
   ];
 }

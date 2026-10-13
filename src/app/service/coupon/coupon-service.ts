@@ -16,6 +16,24 @@ export class CouponService {
     return this.http.get<CouponDto>(`${this.couponUrl}/${code}`);
   }
 
+  // ---------- Admin ----------
+
+  findAll(): Observable<CouponDto[]> {
+    return this.http.get<CouponDto[]>(this.couponUrl);
+  }
+
+  create(coupon: Partial<CouponDto>): Observable<CouponDto> {
+    return this.http.post<CouponDto>(this.couponUrl, coupon);
+  }
+
+  update(id: string, coupon: Partial<CouponDto>): Observable<CouponDto> {
+    return this.http.patch<CouponDto>(`${this.couponUrl}/${id}`, coupon);
+  }
+
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.couponUrl}/${id}`);
+  }
+
   /**
    * Client-side estimate only, mirrors OrderServiceImpl.computeDiscount() on the backend.
    * The real discount is always recalculated server-side at checkout - this is just for

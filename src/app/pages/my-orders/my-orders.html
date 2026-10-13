@@ -1,107 +1,157 @@
-<main class="orders-page-container">
-  <!-- Header Banner -->
+<div class="orders-page-container">
   <section class="page-header-banner">
     <div class="header-content">
       <h1>My Order History</h1>
-      <p>Track your recent sweet purchases and view details for past orders.</p>
+      <p>Track your recent purchases, pay for pending orders and reorder your favourites.</p>
     </div>
   </section>
 
-  @if (orders.length === 0) {
-  <!-- Modern Empty State -->
-  <div class="empty-orders-card">
-    <div class="empty-icon">
-      <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-        <line x1="3" y1="6" x2="21" y2="6" />
-        <path d="M16 10a4 4 0 0 1-8 0" />
-      </svg>
+  @if (loading()) {
+    <section class="order-list-section" aria-busy="true" aria-label="Loading your orders">
+      @for (i of skeletons; track i) {
+        <div class="pd-skeleton skeleton-order"></div>
+      }
+    </section>
+  } @else if (failed()) {
+    <div class="pd-alert pd-alert--error orders-alert" role="alert">
+      <span>We couldn't load your orders.</span>
+      <button type="button" class="btn-retry" (click)="loadOrders()">Try again</button>
     </div>
-    <h2>No orders found</h2>
-    <p>You haven't placed any orders yet. Indulge in our authentic sweets today!</p>
-    <a routerLink="/products" class="btn-shop">Explore Sweets Menu →</a>
-  </div>
-  } @else {
-  <!-- Order List -->
-  <section class="order-list-section">
-    @for (order of orders; track order.id) {
-    <div class="order-card">
-
-      <!-- Card Header Summary -->
-      <div class="order-summary-header">
-        <div class="header-details">
-          <div class="order-meta-row">
-            <span class="order-id">Order #{{ order.id }}</span>
-            <span [class]="'status-badge status-' + order.status.toLowerCase()">
-              {{ order.status }}
-            </span>
-          </div>
-          <p class="order-date">Placed on {{ order.orderDateTime | date: 'mediumDate' }}</p>
-        </div>
-
-        <div class="header-price-actions">
-          <div class="order-total-block">
-            <span class="total-label">Total Amount</span>
-            <span class="total-value">₹ {{ order.totalAmount | number: '1.2-2' }}</span>
-            @if (order.discountAmount > 0) {
-            <span class="order-discount-note">
-              (Saved ₹{{ order.discountAmount | number: '1.2-2' }} @if (order.couponCode) { via {{ order.couponCode }}
-              })
-            </span>
-            }
-          </div>
-
-          <div class="header-buttons">
-            <button class="btn-action btn-reorder">Reorder</button>
-          </div>
-        </div>
+  } @else if (orders().length === 0) {
+    <div class="empty-orders-card">
+      <div class="empty-icon" aria-hidden="true">
+        <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <path d="M16 10a4 4 0 0 1-8 0" />
+        </svg>
       </div>
-
-      <!-- Card Body: Ordered Items -->
-      <div class="order-details-body">
-        <h4 class="details-heading">Items Ordered</h4>
-        <div class="item-list">
-          @for (item of order.items; track item.id) {
-          <div class="item-row">
-            <img [src]="itemImageUrl(item.productImageId)" [alt]="item.productName" class="item-thumb" />
-            <div class="item-info">
-              <span class="item-name">{{ item.productName }}</span>
-              <div class="item-weight-qty">
-                <span class="item-weight-badge">
-                  {{ getItemWeightDisplay(item) }}
+      <h2>No orders found</h2>
+      <p>You haven't placed any orders yet. Indulge in our authentic sweets today!</p>
+      <a routerLink="/products/sweets" class="btn-shop">Explore the Sweets Menu →</a>
+    </div>
+  } @else {
+    <section class="order-list-section">
+      @for (order of orders(); track order.id) {
+        <article class="order-card" [attr.aria-label]="'Order ' + order.id">
+          <div class="order-summary-header">
+            <div class="header-details">
+              <div class="order-meta-row">
+                <span class="order-id">Order #{{ order.id.slice(0, 8) }}</span>
+                <span [class]="'status-badge status-' + order.status.toLowerCase()">
+                  {{ statusLabels[order.status] }}
                 </span>
-              </div>
-            </div>
-            <span class="item-subtotal">₹ {{ item.subTotal | number: '1.2-2' }}</span>
-          </div>
-          }
-        </div>
-
-        <!-- Status Timeline -->
-        @if (order.statusHistory && order.statusHistory.length > 0) {
-        <div class="timeline-section">
-          <h4 class="details-heading">Status History</h4>
-          <div class="status-timeline">
-            @for (entry of order.statusHistory; track entry.id) {
-            <div class="timeline-row">
-              <div class="timeline-dot"></div>
-              <div class="timeline-content">
-                <span class="timeline-status">{{ entry.status }}</span>
-                <span class="timeline-date">{{ entry.createdAt | date: 'short' }}</span>
-                @if (entry.remarks) {
-                <span class="timeline-remarks">— {{ entry.remarks }}</span>
+                @if (paymentBadge(order); as badge) {
+                  <span class="payment-badge payment-badge--{{ badge.tone }}">{{ badge.text }}</span>
                 }
               </div>
+              <p class="order-date">Placed on {{ order.orderDateTime | date: 'mediumDate' }}</p>
             </div>
+
+            <div class="header-price-actions">
+              <div class="order-total-block">
+                <span class="total-label">Total Amount</span>
+                <span class="total-value">₹ {{ order.totalAmount | number: '1.2-2' }}</span>
+                @if (order.discountAmount > 0) {
+                  <span class="order-discount-note">
+                    Saved ₹{{ order.discountAmount | number: '1.2-2' }}@if (order.couponCode) { via {{ order.couponCode }} }
+                  </span>
+                }
+              </div>
+
+              <div class="header-buttons">
+                <a class="btn-action btn-invoice" [routerLink]="['/orders', order.id, 'invoice']">Invoice</a>
+                <button
+                  type="button"
+                  class="btn-action btn-reorder"
+                  [disabled]="isBusy(order)"
+                  (click)="reorder(order)"
+                >
+                  Reorder
+                </button>
+              </div>
+            </div>
+          </div>
+
+          @if (canPay(order) || canCancel(order)) {
+            <div class="order-actions">
+              @if (canPay(order)) {
+                <button type="button" class="btn-action btn-pay" [disabled]="isBusy(order)" (click)="payNow(order)">
+                  Pay now
+                </button>
+                <button type="button" class="btn-action btn-secondary" [disabled]="isBusy(order)" (click)="payOnDelivery(order)">
+                  Pay on delivery instead
+                </button>
+              }
+              @if (canCancel(order)) {
+                <button type="button" class="btn-action btn-cancel-order" [disabled]="isBusy(order)" (click)="cancel(order)">
+                  Cancel order
+                </button>
+              }
+            </div>
+          }
+
+          <div class="order-details-body">
+            <h4 class="details-heading">Items Ordered</h4>
+            <div class="item-list">
+              @for (item of order.items; track item.id) {
+                <div class="item-row">
+                  <img
+                    [src]="itemImageUrl(item.productImageId)"
+                    alt=""
+                    width="56"
+                    height="56"
+                    loading="lazy"
+                    class="item-thumb"
+                    appImgFallback
+                  />
+                  <div class="item-info">
+                    <span class="item-name">{{ item.productName }}</span>
+                    <div class="item-weight-qty">
+                      <span class="item-weight-badge">{{ itemWeightText(item) }}</span>
+                    </div>
+                  </div>
+                  <span class="item-subtotal">₹ {{ item.subTotal | number: '1.2-2' }}</span>
+                </div>
+              }
+            </div>
+
+            @if (order.deliveryAddress; as address) {
+              <div class="delivery-section">
+                <h4 class="details-heading">Delivering to</h4>
+                <address class="delivery-address">
+                  @if (address.label) { <strong>{{ address.label }}</strong><br /> }
+                  {{ address.line1 }}@if (address.line2) {, {{ address.line2 }}}<br />
+                  {{ address.city }}, {{ address.state }} - {{ address.pincode }}
+                  @if (address.landmark) { <br />Landmark: {{ address.landmark }} }
+                  @if (address.contactPhone) { <br />Phone: {{ address.contactPhone }} }
+                </address>
+              </div>
+            }
+
+            @if (order.statusHistory && order.statusHistory.length > 0) {
+              <div class="timeline-section">
+                <h4 class="details-heading">Status History</h4>
+                <ol class="status-timeline">
+                  @for (entry of order.statusHistory; track entry.id) {
+                    <li class="timeline-row">
+                      <div class="timeline-dot" aria-hidden="true"></div>
+                      <div class="timeline-content">
+                        <span class="timeline-status">{{ statusLabels[entry.status] }}</span>
+                        <span class="timeline-date">{{ entry.createdAt | date: 'short' }}</span>
+                        @if (entry.remarks) {
+                          <span class="timeline-remarks">— {{ entry.remarks }}</span>
+                        }
+                      </div>
+                    </li>
+                  }
+                </ol>
+              </div>
             }
           </div>
-        </div>
-        }
-      </div>
-
-    </div>
-    }
-  </section>
+        </article>
+      }
+    </section>
   }
-</main>
+</div>

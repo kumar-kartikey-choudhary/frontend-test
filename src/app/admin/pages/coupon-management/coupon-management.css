@@ -1,0 +1,21 @@
+.code {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.status-text {
+  margin-left: 0.5rem;
+}
+
+td.right .adm-btn + .adm-btn {
+  margin-left: 0.4rem;
+}
+
+.adm-select--full {
+  width: 100%;
+}
+
+.adm-table td {
+  white-space: nowrap;
+}

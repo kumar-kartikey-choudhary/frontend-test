@@ -1,116 +1,135 @@
-<div class="payment-management-container">
-  <h1><span class="icon">💳</span> Payment Management</h1>
-
-  @if (!isLoading && !errorMsg) {
-    <div class="summary-cards">
-      <div class="summary-card">
-        <span class="summary-label">Total Collected</span>
-        <span class="summary-value success">₹ {{ totalCollected | number: '1.2-2' }}</span>
-      </div>
-      <div class="summary-card">
-        <span class="summary-label">COD Awaiting Collection</span>
-        <span class="summary-value warning">{{ pendingCodCount }} order(s)</span>
-        <span class="summary-sub">₹ {{ pendingCodAmount | number: '1.2-2' }} outstanding</span>
-      </div>
-      <div class="summary-card">
-        <span class="summary-label">Failed Payments</span>
-        <span class="summary-value danger">{{ failedCount }}</span>
-      </div>
+<div class="adm-page">
+  <header class="adm-head">
+    <div>
+      <h1 class="adm-title">Payments</h1>
+      <p class="adm-sub">Money collected, cash still to collect, and refunds.</p>
     </div>
+  </header>
+
+  @if (!isLoading() && !errorMsg()) {
+    <section class="adm-stats" aria-label="Payment summary">
+      <div class="adm-stat adm-stat--success">
+        <span class="adm-stat-label">Total collected</span>
+        <span class="adm-stat-value adm-stat-value--success">₹ {{ totalCollected() | number: '1.2-2' }}</span>
+      </div>
+      <div class="adm-stat adm-stat--warning">
+        <span class="adm-stat-label">COD awaiting collection</span>
+        <span class="adm-stat-value adm-stat-value--warning">{{ pendingCodCount() }} order(s)</span>
+        <span class="adm-stat-note">₹ {{ pendingCodAmount() | number: '1.2-2' }} outstanding</span>
+      </div>
+      <div class="adm-stat adm-stat--danger">
+        <span class="adm-stat-label">Failed payments</span>
+        <span class="adm-stat-value adm-stat-value--danger">{{ failedCount() }}</span>
+      </div>
+    </section>
   }
 
-  <div class="controls-bar">
-    <div class="search-group">
+  <div class="adm-card">
+    <div class="adm-toolbar">
       <input
-        type="text"
-        placeholder="Search by order ID, transaction ID, or gateway payment ID..."
-        [(ngModel)]="searchTerm"
-        class="search-input"
+        type="search"
+        placeholder="Search by order ID, transaction ID or gateway payment ID…"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event); pg.reset()"
+        class="adm-input adm-search"
         name="search-term"
+        aria-label="Search payments"
       />
-      <span class="search-icon">🔍</span>
+      <span class="adm-spacer"></span>
+      <label class="adm-filter" for="status-filter">
+        Status
+        <select id="status-filter" [ngModel]="selectedStatus()" (ngModelChange)="selectedStatus.set($event); pg.reset()" class="adm-select" name="status-filter">
+          @for (status of statusOptions; track status) {
+            <option [value]="status">{{ status }}</option>
+          }
+        </select>
+      </label>
     </div>
 
-    <div class="filter-group">
-      <label for="status-filter">Filter by Status:</label>
-      <select id="status-filter" [(ngModel)]="selectedStatus" class="status-select" name="status-filter">
-        @for (status of statusOptions; track status) {
-          <option [value]="status">{{ status }}</option>
-        }
-      </select>
-    </div>
-  </div>
+    @if (isLoading()) {
+      <div class="adm-state" aria-busy="true">
+        <div class="adm-spinner"></div>
+        <p>Loading payments…</p>
+      </div>
+    }
 
-  @if (isLoading) {
-    <p class="loading-message">Loading payments...</p>
-  }
+    @if (errorMsg()) {
+      <div class="adm-state">
+        <p class="adm-error">{{ errorMsg() }}</p>
+        <button type="button" (click)="loadPayments()" class="adm-btn adm-btn--sm">Retry</button>
+      </div>
+    }
 
-  @if (errorMsg) {
-    <div class="error-message-box">
-      <p>{{ errorMsg }}</p>
-      <button (click)="loadPayments()" class="btn-retry">Retry</button>
-    </div>
-  }
-
-  @if (!isLoading && !errorMsg) {
-    <div class="payment-table-panel panel">
-      <h2>Transactions ({{ selectedStatus }})</h2>
-
-      @if (filteredPayments.length > 0) {
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Transaction ID</th>
-              <th>Order ID</th>
-              <th>Method</th>
-              <th>Amount</th>
-              <th>Gateway Payment ID</th>
-              <th>Status</th>
-              <th>Date</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (payment of filteredPayments; track payment.id) {
+    @if (!isLoading() && !errorMsg()) {
+      @if (filteredPayments().length > 0) {
+        <div class="adm-table-wrap">
+          <table class="adm-table">
+            <thead>
               <tr>
-                <td class="mono">#{{ payment.id }}</td>
-                <td class="mono order-id">#{{ payment.orderId }}</td>
-                <td>
-                  <span class="method-badge" [class.method-cod]="payment.method === 'COD'">
-                    {{ payment.method }}
-                  </span>
-                </td>
-                <td class="total-col">₹ {{ payment.amount | number: '1.2-2' }}</td>
-                <td class="mono">{{ payment.gatewayPaymentId || '—' }}</td>
-                <td>
-                  <span [class]="'status-badge status-' + payment.status.toLowerCase()">
-                    {{ payment.status }}
-                  </span>
-                  @if (payment.status === 'FAILED' && payment.failureReason) {
-                    <span class="failure-reason" [title]="payment.failureReason">ⓘ</span>
-                  }
-                </td>
-                <td>{{ payment.createdAt | date: 'short' }}</td>
-                <td>
-                  @if (payment.method === 'COD' && payment.status === 'PENDING') {
-                    <button class="btn-action btn-collect" (click)="markCollected(payment)">
-                      Mark Collected
-                    </button>
-                  }
-                  @if (payment.status === 'SUCCESS') {
-                    <button class="btn-action" (click)="refund(payment)">Refund</button>
-                  }
-                  @if (!(payment.method === 'COD' && payment.status === 'PENDING') && payment.status !== 'SUCCESS') {
-                    <span class="no-action">—</span>
-                  }
-                </td>
+                <th>Transaction</th>
+                <th>Order</th>
+                <th>Method</th>
+                <th class="num">Amount</th>
+                <th>Gateway payment ID</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th class="right">Actions</th>
               </tr>
-            }
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              @for (payment of pg.items(); track payment.id) {
+                <tr>
+                  <td class="adm-mono">#{{ payment.id }}</td>
+                  <td class="adm-mono adm-strong">#{{ payment.orderId }}</td>
+                  <td>
+                    <span class="adm-badge" [class.adm-badge--warning]="payment.method === 'COD'">
+                      {{ payment.method }}
+                    </span>
+                  </td>
+                  <td class="num adm-amount">
+                    ₹ {{ payment.amount | number: '1.2-2' }}
+                    @if ((payment.refundedAmount ?? 0) > 0 && payment.status !== 'REFUNDED') {
+                      <br /><small class="partial">₹ {{ payment.refundedAmount | number: '1.2-2' }} refunded</small>
+                    }
+                  </td>
+                  <td class="adm-mono">{{ payment.gatewayPaymentId || '—' }}</td>
+                  <td class="nowrap">
+                    <span class="adm-badge" [class]="badgeFor(payment.status)">
+                      {{ payment.status.toLowerCase() }}
+                    </span>
+                    @if (payment.status === 'FAILED' && payment.failureReason) {
+                      <span class="failure-reason" [title]="payment.failureReason">ⓘ</span>
+                    }
+                  </td>
+                  <td class="nowrap">{{ payment.createdAt | date: 'd MMM, h:mm a' }}</td>
+                  <td class="right">
+                    @if (canCollect(payment)) {
+                      <button type="button" class="adm-btn adm-btn--sm adm-btn--success btn-action btn-collect" (click)="markCollected(payment)">
+                        Mark collected
+                      </button>
+                    }
+                    @if (canRefund(payment)) {
+                      <button type="button" class="adm-btn adm-btn--sm btn-action" (click)="refund(payment)">Refund</button>
+                    }
+                    @if (!canCollect(payment) && !canRefund(payment)) {
+                      <span class="adm-muted">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-pager
+          [total]="pg.total()"
+          [page]="pg.current()"
+          [pageSize]="pg.pageSize()"
+          (pageChange)="pg.goTo($event)"
+          (pageSizeChange)="pg.setSize($event)"
+        />
       } @else {
-        <p class="no-payments-message">No payments found matching the current filters.</p>
+        <div class="adm-state"><p><strong>No payments found</strong></p><p>Nothing matches the current search or filter.</p></div>
       }
-    </div>
-  }
+    }
+  </div>
 </div>

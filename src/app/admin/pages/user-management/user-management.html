@@ -1,8 +1,8 @@
-<div class="um">
-  <header class="um-head">
+<div class="adm-page">
+  <header class="adm-head">
     <div>
-      <h1>Users</h1>
-      <p>Manage registered customers and their activity</p>
+      <h1 class="adm-title">Customers</h1>
+      <p class="adm-sub">Registered accounts and their activity.</p>
     </div>
     <div class="um-count">
       <span class="num">{{ filteredUsers().length }}</span>
@@ -10,72 +10,88 @@
     </div>
   </header>
 
-  <section class="card">
-    <div class="card-head">
-      <h2>Registered Users</h2>
+  <section class="adm-card">
+    <div class="adm-toolbar">
       <input
-        class="search"
+        class="adm-input adm-search"
         type="search"
+        aria-label="Search users"
         placeholder="Search name, email or username"
         [ngModel]="query()"
-        (ngModelChange)="query.set($event)"
+        (ngModelChange)="query.set($event); pg.reset()"
       />
     </div>
 
     @if (isLoading()) {
-      <div class="state">
-        <div class="spinner"></div>
+      <div class="adm-state state">
+        <div class="adm-spinner"></div>
         <p>Loading users…</p>
       </div>
     } @else if (error()) {
-      <div class="state">
-        <p class="err">{{ error() }}</p>
-        <button class="btn" (click)="loadAllUsers()">Retry</button>
+      <div class="adm-state state">
+        <p class="adm-error err">{{ error() }}</p>
+        <button type="button" class="adm-btn adm-btn--sm" (click)="loadAllUsers()">Retry</button>
       </div>
     } @else if (filteredUsers().length === 0) {
-      <div class="state">
-        <p>No users found</p>
-        <span class="muted">Try a different search or add users to the system.</span>
+      <div class="adm-state state">
+        <p><strong>No users found</strong></p>
+        <p>Try a different search.</p>
       </div>
     } @else {
-      <div class="table-wrap">
-        <table>
+      <div class="adm-table-wrap">
+        <table class="adm-table">
           <thead>
             <tr>
               <th>User</th>
               <th>Name</th>
               <th>Email</th>
+              <th>Email status</th>
               <th>Role</th>
               <th class="right">Actions</th>
             </tr>
           </thead>
           <tbody>
-            @for (user of filteredUsers(); track user.id) {
+            @for (user of pg.items(); track user.id) {
               <tr>
                 <td>
-                  <div class="user">
-                    <span class="avatar">{{ getInitials(user.username) }}</span>
+                  <div class="adm-person">
+                    <span class="adm-avatar">{{ getInitials(user.username) }}</span>
                     <div>
-                      <div class="name">{{ user.username }}</div>
-                      <div class="muted">#{{ user.id }}</div>
+                      <div class="adm-strong">{{ user.username }}</div>
+                      <div class="adm-muted">#{{ user.id }}</div>
                     </div>
                   </div>
                 </td>
                 <td>{{ user.firstName }} {{ user.lastName }}</td>
-                <td class="muted">{{ user.email }}</td>
+                <td class="adm-muted">{{ user.email }}</td>
                 <td>
-                  <span class="tag" [ngClass]="'tag-' + user.role.toLowerCase()">
-                    {{ user.role | lowercase }}
+                  <span class="adm-badge" [class.adm-badge--success]="user.emailVerified" [class.adm-badge--warning]="!user.emailVerified">
+                    {{ user.emailVerified ? 'confirmed' : 'not confirmed' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="adm-badge" [class.adm-badge--brand]="roleLabel(user.role) === 'admin'">
+                    {{ roleLabel(user.role) }}
                   </span>
                 </td>
                 <td class="right">
-                  <button class="btn ghost" (click)="viewHistory(user)">View history</button>
+                  <button type="button" class="adm-btn adm-btn--sm" (click)="viewHistory(user)">View orders</button>
+                  <button type="button" class="adm-btn adm-btn--sm adm-btn--danger danger" [disabled]="deleting().has(user.id)" (click)="deleteUser(user)">
+                    {{ deleting().has(user.id) ? 'Deleting…' : 'Delete' }}
+                  </button>
                 </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
+      <app-pager
+        [total]="pg.total()"
+        [page]="pg.current()"
+        [pageSize]="pg.pageSize()"
+        (pageChange)="pg.goTo($event)"
+        (pageSizeChange)="pg.setSize($event)"
+      />
     }
   </section>
 </div>

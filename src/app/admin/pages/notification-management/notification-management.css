@@ -1,0 +1,29 @@
+.compose {
+  max-width: 40rem;
+  padding: 1.5rem;
+}
+
+.audience {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.audience legend {
+  margin-bottom: 0.5rem;
+}
+
+.kind {
+  width: 100%;
+  max-width: 16rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+}

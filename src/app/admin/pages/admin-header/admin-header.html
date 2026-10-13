@@ -1,69 +1,56 @@
-<div class="top-ticker">
-  <p class="ticker-content">
-    <span
-      >✨ **Pratik Dairy & Sweets: The Taste of Tradition** | Fresh Milk & Paneer Available Daily |
-      Order Your Festive Sweets Today! ✨</span
-    >
-  </p>
-</div>
-
-<header class="pratik-header dark-theme">
-  <div class="header-content">
-    <a routerLink="/admin" class="logo-link">
-      <img
-        src="assets/images/pratik-dairy-logo.png"
-        alt="Pratik Dairy & Sweets Logo"
-        class="logo-image"
-      />
-      <h1>Pratik Dairy & Sweets</h1>
-      <span class="tagline">Freshness & Tradition</span>
+<header class="adm-side" [class.open]="isMenuOpen()">
+  <div class="brand-row">
+    <a routerLink="/admin/dashboard" class="brand" (click)="closeMenu()">
+      <img src="assets/images/pratik-dairy-logo.png" alt="" class="brand-logo" />
+      <span class="brand-text">
+        <span class="brand-name">Pratik Dairy</span>
+        <span class="brand-sub">Admin console</span>
+      </span>
     </a>
 
-    <nav class="desktop-nav">
-      <ul>
-        @for (item of navLinks; track item.label) {
-          <li>
-            <a
-              [routerLink]="item.link"
-              routerLinkActive="active-link"
-              [routerLinkActiveOptions]="
-                item.link === '/dashboard' ? { exact: true } : { exact: false }
-              "
-            >
-              {{ item.label }}
-            </a>
-          </li>
+    <button
+      type="button"
+      class="menu-btn"
+      aria-controls="admin-nav"
+      [attr.aria-expanded]="isMenuOpen()"
+      aria-label="Toggle navigation"
+      (click)="toggleMenu()"
+    >
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        @if (isMenuOpen()) {
+          <path d="M6 6l12 12M18 6L6 18" />
+        } @else {
+          <path d="M3 6h18M3 12h18M3 18h18" />
         }
-      </ul>
-    </nav>
-
-    <div class="utility-block">
-      <div class="icon-group">
-        <button class="logout-btn" (click)="onLogOut()" aria-label="Logout">Logout</button>
-      </div>
-
-      <button
-        class="menu-toggle-btn"
-        (click)="toggleMenu()"
-        aria-label="Toggle navigation"
-        [attr.aria-expanded]="isMenuOpen"
-      >
-        @if (!isMenuOpen) {
-          <span>☰</span>
-        }
-        @if (isMenuOpen) {
-          <span>✕</span>
-        }
-      </button>
-    </div>
+      </svg>
+    </button>
   </div>
-  <nav class="mobile-nav" [class.open]="isMenuOpen">
-    <ul>
-      @for (item of navLinks; track item.label) {
-        <li>
-          <a [routerLink]="item.link" (click)="toggleMenu()">{{ item.label }}</a>
-        </li>
-      }
-    </ul>
+
+  <nav id="admin-nav" class="nav" aria-label="Admin">
+    @for (item of navLinks; track item.label) {
+      <a
+        [routerLink]="item.link"
+        routerLinkActive="active"
+        class="nav-link"
+        (click)="closeMenu()"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path [attr.d]="item.icon" /></svg>
+        <span>{{ item.label }}</span>
+      </a>
+    }
   </nav>
+
+  <div class="foot">
+    <a routerLink="/" class="store-link" (click)="closeMenu()">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+      </svg>
+      View storefront
+    </a>
+    <div class="who">
+      <span class="who-avatar" aria-hidden="true">{{ auth.getUserInitial() }}</span>
+      <span class="who-name">{{ auth.username() }}</span>
+    </div>
+    <button type="button" class="logout-btn" (click)="onLogOut()">Log out</button>
+  </div>
 </header>

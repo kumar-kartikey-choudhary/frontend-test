@@ -22,6 +22,9 @@ export class Login implements OnInit {
   /** Disables the submit button and shows progress while the request is in flight. */
   readonly submitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  /** Neutral notice shown above the form, e.g. "your session expired". */
+  readonly infoMessage = signal<string | null>(null);
+  readonly showPassword = signal(false);
 
   private returnUrl: string | null = null;
 
@@ -29,7 +32,9 @@ export class Login implements OnInit {
     const params = this.route.snapshot.queryParamMap;
     this.returnUrl = params.get('returnUrl');
     if (params.get('sessionExpired')) {
-      this.toast.info('Your session expired. Please sign in again.');
+      this.infoMessage.set('Your session expired. Please sign in again.');
+    } else if (params.get('passwordReset')) {
+      this.infoMessage.set('Your password has been changed. Sign in with your new password.');
     }
     // Already signed in? Don't show the form again.
     if (this.authService.isLoggedIn()) {
@@ -37,11 +42,16 @@ export class Login implements OnInit {
     }
   }
 
+  togglePasswordVisibility(): void {
+    this.showPassword.update((visible) => !visible);
+  }
+
   onLogin(): void {
     const username = this.loginForm.username.trim();
     const password = this.loginForm.password;
 
     if (!username || !password) {
+      this.infoMessage.set(null);
       this.errorMessage.set('Please enter both your username and password.');
       return;
     }
@@ -49,6 +59,7 @@ export class Login implements OnInit {
 
     this.submitting.set(true);
     this.errorMessage.set(null);
+    this.infoMessage.set(null);
 
     this.authService.login({ username, password }).subscribe({
       next: () => {
@@ -59,9 +70,11 @@ export class Login implements OnInit {
       error: (error) => {
         this.submitting.set(false);
         this.errorMessage.set(
-          error?.status === 401 || error?.status === 400
-            ? 'Invalid username or password.'
-            : 'Could not sign you in right now. Please try again.',
+          error?.status === 429
+            ? (error.error?.message ?? 'Too many failed attempts. Please try again in a few minutes.')
+            : error?.status === 401 || error?.status === 400
+              ? 'Invalid username or password.'
+              : 'Could not sign you in right now. Please try again.',
         );
       },
     });

@@ -9,6 +9,8 @@ export interface InitiatePaymentRequest {
   amount: number;
   method: PaymentMethod;
   savedPaymentMethodId?: string;
+  /** Card payments: remember this card for next time. */
+  saveCard?: boolean;
 }
 
 /** Mirrors backend InitiatePaymentResponse - gatewayOrderId/keyId are null for COD (no gateway step). */
@@ -18,6 +20,8 @@ export interface InitiatePaymentResponse {
   keyId: string | null;
   amount: number;
   currency: string;
+  /** Set when a card is being saved or a saved card reused: open Checkout under this customer. */
+  gatewayCustomerId?: string | null;
 }
 
 /** Mirrors backend VerifyPaymentRequest - the fields Razorpay Checkout hands back on success. */
@@ -40,6 +44,8 @@ export interface PaymentTransactionDto {
   gatewayPaymentId?: string;
   upiVpa?: string;
   failureReason?: string;
+  /** Part (or all) of the amount already returned; below `amount` while only part has been refunded. */
+  refundedAmount?: number;
   paidAt?: string;
   createdAt: string;
 }

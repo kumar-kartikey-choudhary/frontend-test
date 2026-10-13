@@ -1,0 +1,52 @@
+:host {
+  display: block;
+  background: var(--pd-dark-bg);
+  color: var(--pd-text-light);
+  min-height: 80vh;
+}
+
+.banner {
+  padding: 3rem 1.25rem;
+  text-align: center;
+  background: var(--pd-surface-2);
+  border-bottom: 1px solid var(--pd-border);
+}
+
+.banner h1 {
+  margin: 0 0 var(--pd-space-2);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-family: var(--pd-font-display);
+  color: var(--pd-text);
+}
+
+.banner p {
+  margin: 0;
+  color: var(--pd-text-muted);
+}
+
+.listing {
+  width: min(100% - 2rem, 1300px);
+  margin: var(--pd-space-8) auto;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--pd-space-6);
+}
+
+.state {
+  padding: var(--pd-space-12) 0;
+  text-align: center;
+  color: var(--pd-text-muted);
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pd-primary);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

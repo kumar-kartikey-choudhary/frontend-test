@@ -1,4 +1,4 @@
-<main class="signup-page-container">
+<div class="signup-page-container">
   <!-- Decorative background elements -->
   <div class="glow-orb orb-1"></div>
   <div class="glow-orb orb-2"></div>
@@ -14,7 +14,12 @@
       <p>Sign up to get fresh dairy products & traditional sweets delivered directly to your doorstep.</p>
     </div>
 
-    <form (ngSubmit)="onSubmit()" #signupForm="ngForm" class="signup-form">
+    <form
+      (ngSubmit)="signupForm.invalid ? signupForm.control.markAllAsTouched() : onSubmit()"
+      #signupForm="ngForm"
+      class="signup-form"
+      novalidate
+    >
       <!-- 3-Column Names -->
       <div class="form-grid grid-3">
         <div class="input-group">
@@ -24,14 +29,16 @@
             id="firstName"
             name="firstName"
             placeholder="John"
+            autocomplete="given-name"
             [(ngModel)]="user.firstName"
             required
             #firstNameField="ngModel"
-            [class.is-invalid]="firstNameField.invalid && (firstNameField.dirty || firstNameField.touched)"
+            [class.is-invalid]="showError(firstNameField)"
+            [attr.aria-invalid]="showError(firstNameField) ? true : null"
           />
-          <div *ngIf="firstNameField.invalid && (firstNameField.dirty || firstNameField.touched)" class="error-text">
-            Required
-          </div>
+          @if (showError(firstNameField)) {
+            <div class="error-text" role="alert">Required</div>
+          }
         </div>
 
         <div class="input-group">
@@ -41,6 +48,7 @@
             id="middleName"
             name="middleName"
             placeholder="Kumar"
+            autocomplete="additional-name"
             [(ngModel)]="user.middleName"
           />
         </div>
@@ -52,14 +60,16 @@
             id="lastName"
             name="lastName"
             placeholder="Doe"
+            autocomplete="family-name"
             [(ngModel)]="user.lastName"
             required
             #lastNameField="ngModel"
-            [class.is-invalid]="lastNameField.invalid && (lastNameField.dirty || lastNameField.touched)"
+            [class.is-invalid]="showError(lastNameField)"
+            [attr.aria-invalid]="showError(lastNameField) ? true : null"
           />
-          <div *ngIf="lastNameField.invalid && (lastNameField.dirty || lastNameField.touched)" class="error-text">
-            Required
-          </div>
+          @if (showError(lastNameField)) {
+            <div class="error-text" role="alert">Required</div>
+          }
         </div>
       </div>
 
@@ -72,14 +82,18 @@
             id="username"
             name="username"
             placeholder="johndoe"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
             [(ngModel)]="user.username"
             required
             #usernameField="ngModel"
-            [class.is-invalid]="usernameField.invalid && (usernameField.dirty || usernameField.touched)"
+            [class.is-invalid]="showError(usernameField)"
+            [attr.aria-invalid]="showError(usernameField) ? true : null"
           />
-          <div *ngIf="usernameField.invalid && (usernameField.dirty || usernameField.touched)" class="error-text">
-            Username required
-          </div>
+          @if (showError(usernameField)) {
+            <div class="error-text" role="alert">Username required</div>
+          }
         </div>
 
         <div class="input-group">
@@ -88,9 +102,18 @@
             type="tel"
             id="phoneNumber"
             name="phoneNumber"
-            [(ngModel)]="user.phoneNumber"
+            inputmode="numeric"
+            autocomplete="tel-national"
+            pattern="[0-9]{10}"
             placeholder="9876543210"
+            [(ngModel)]="user.phoneNumber"
+            #phoneField="ngModel"
+            [class.is-invalid]="showError(phoneField)"
+            [attr.aria-invalid]="showError(phoneField) ? true : null"
           />
+          @if (showError(phoneField)) {
+            <div class="error-text" role="alert">Enter a 10-digit mobile number</div>
+          }
         </div>
       </div>
 
@@ -102,61 +125,90 @@
           id="email"
           name="email"
           placeholder="john@example.com"
+          autocomplete="email"
           [(ngModel)]="user.email"
           required
           email
           #emailField="ngModel"
-          [class.is-invalid]="emailField.invalid && (emailField.dirty || emailField.touched)"
+          [class.is-invalid]="showError(emailField)"
+          [attr.aria-invalid]="showError(emailField) ? true : null"
         />
-        <div *ngIf="emailField.invalid && (emailField.dirty || emailField.touched)" class="error-text">
-          Enter a valid email address
-        </div>
+        @if (showError(emailField)) {
+          <div class="error-text" role="alert">Enter a valid email address</div>
+        }
       </div>
 
       <!-- 2-Column Passwords -->
       <div class="form-grid grid-2">
         <div class="input-group">
           <label for="password">Password <span class="req">*</span></label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            placeholder="Min 8 characters"
-            [(ngModel)]="user.password"
-            required
-            minlength="8"
-            #passwordField="ngModel"
-            [class.is-invalid]="passwordField.invalid && (passwordField.dirty || passwordField.touched)"
-          />
-          <div *ngIf="passwordField.invalid && (passwordField.dirty || passwordField.touched)" class="error-text">
-            Min 8 characters
+          <div class="password-field">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              id="password"
+              name="password"
+              placeholder="Min 8 characters"
+              autocomplete="new-password"
+              [(ngModel)]="user.password"
+              required
+              minlength="8"
+              #passwordField="ngModel"
+              [class.is-invalid]="showError(passwordField)"
+              [attr.aria-invalid]="showError(passwordField) ? true : null"
+              aria-describedby="password-strength"
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              [attr.aria-label]="showPassword() ? 'Hide passwords' : 'Show passwords'"
+              [attr.aria-pressed]="showPassword()"
+              (click)="togglePasswordVisibility()"
+            >
+              {{ showPassword() ? 'Hide' : 'Show' }}
+            </button>
           </div>
+          @if (showError(passwordField)) {
+            <div class="error-text" role="alert">Min 8 characters</div>
+          }
+          @if (user.password) {
+            <div id="password-strength" class="strength strength--{{ passwordStrength.level }}">
+              <span class="strength-bar" aria-hidden="true"><span></span></span>
+              <span>{{ passwordStrength.label }}</span>
+            </div>
+          }
         </div>
 
         <div class="input-group">
           <label for="confirmPassword">Confirm Password <span class="req">*</span></label>
           <input
-            type="password"
+            [type]="showPassword() ? 'text' : 'password'"
             id="confirmPassword"
             name="confirmPassword"
             placeholder="Re-enter password"
+            autocomplete="new-password"
             [(ngModel)]="user.confirmPassword"
             required
             #confirmPasswordField="ngModel"
             [class.is-invalid]="passwordMismatch && (signupForm.submitted || confirmPasswordField.touched)"
+            [attr.aria-invalid]="passwordMismatch ? true : null"
           />
-          <div *ngIf="passwordMismatch" class="error-text">
-            Passwords do not match
-          </div>
+          @if (passwordMismatch) {
+            <div class="error-text" role="alert">Passwords do not match</div>
+          }
         </div>
       </div>
 
       <!-- Action Button -->
-      <button type="submit" [disabled]="!signupForm.valid" class="btn-submit">
-        <span>Complete Registration</span>
-        <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-        </svg>
+      <button type="submit" [disabled]="submitting()" class="btn-submit">
+        @if (submitting()) {
+          <span class="pd-spinner" aria-hidden="true"></span>
+          <span>Creating your account…</span>
+        } @else {
+          <span>Complete Registration</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
+        }
       </button>
 
       <div class="login-footer">
@@ -164,4 +216,4 @@
       </div>
     </form>
   </div>
-</main>
+</div>

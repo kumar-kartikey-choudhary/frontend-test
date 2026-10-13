@@ -1,0 +1,90 @@
+<section class="reviews" aria-labelledby="reviews-title">
+  <h2 id="reviews-title">Customer reviews</h2>
+
+  @if (loading()) {
+    <p class="muted" aria-busy="true">Loading reviews…</p>
+  } @else if (failed()) {
+    <p class="muted" role="alert">We couldn't load the reviews right now.</p>
+  } @else if (data(); as d) {
+    <div class="summary">
+      @if (d.count > 0) {
+        <span class="average">{{ d.average }}</span>
+        <div>
+          <app-star-rating [value]="d.average" />
+          <p class="muted">Based on {{ d.count }} {{ d.count === 1 ? 'review' : 'reviews' }}</p>
+        </div>
+      } @else {
+        <p class="muted">No reviews yet. Be the first to share what you think.</p>
+      }
+    </div>
+
+    <div class="write">
+      @if (!signedIn()) {
+        <p class="muted">
+          <button type="button" class="link" (click)="goToLogin()">Sign in</button> to write a review.
+        </p>
+      } @else if (mine(); as own) {
+        @if (!editing()) {
+          <button type="button" class="btn" (click)="startEdit(own)">Edit your review</button>
+        }
+      } @else if (!editing()) {
+        <button type="button" class="btn" (click)="editing.set(true)">Write a review</button>
+      }
+
+      @if (editing()) {
+        <form class="form" (ngSubmit)="submit()" novalidate>
+          <fieldset class="rating-field">
+            <legend>Your rating</legend>
+            <div class="picker" role="radiogroup" aria-label="Your rating">
+              @for (n of stars; track n) {
+                <button
+                  type="button"
+                  class="pick"
+                  [class.pick--on]="n <= rating()"
+                  role="radio"
+                  [attr.aria-checked]="rating() === n"
+                  [attr.aria-label]="n + (n === 1 ? ' star' : ' stars')"
+                  (click)="setRating(n)"
+                >★</button>
+              }
+            </div>
+            @if (ratingMissing()) {
+              <p class="error" role="alert">Choose a rating from 1 to 5 stars.</p>
+            }
+          </fieldset>
+
+          <label class="comment-field">
+            <span>Your review <small>(optional)</small></span>
+            <textarea name="comment" rows="4" maxlength="1000" [(ngModel)]="comment" placeholder="How was it? Freshness, taste, packing…"></textarea>
+          </label>
+
+          <div class="actions">
+            <button type="submit" class="btn btn--primary" [disabled]="submitting()">
+              {{ submitting() ? 'Saving…' : mine() ? 'Update review' : 'Post review' }}
+            </button>
+            <button type="button" class="btn" (click)="cancelEdit()">Cancel</button>
+          </div>
+        </form>
+      }
+    </div>
+
+    <ul class="list">
+      @for (review of d.reviews; track review.id) {
+        <li class="item" [class.item--mine]="review.mine">
+          <div class="head">
+            <app-star-rating [value]="review.rating" />
+            <strong>{{ review.authorName }}</strong>
+            @if (review.mine) { <span class="badge">You</span> }
+            <time class="muted" [attr.datetime]="review.createdAt">{{ review.createdAt | date: 'mediumDate' }}</time>
+          </div>
+          @if (review.comment) {
+            <p class="text">{{ review.comment }}</p>
+          }
+          @if (review.mine || isAdmin()) {
+            <button type="button" class="link link--danger" (click)="remove(review)">Delete</button>
+          }
+        </li>
+      }
+    </ul>
+  }
+</section>

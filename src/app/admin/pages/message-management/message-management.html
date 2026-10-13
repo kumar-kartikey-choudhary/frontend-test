@@ -1,0 +1,60 @@
+<div class="adm-page">
+  <header class="adm-head">
+    <div>
+      <h1 class="adm-title">Customer messages</h1>
+      <p class="adm-sub">Sent through the Contact page. Reply by email, then mark them handled.</p>
+    </div>
+    <div class="um-count">
+      <span class="num">{{ openCount() }}</span>
+      <span class="lbl">Waiting</span>
+    </div>
+  </header>
+
+  <section class="adm-card">
+    <div class="adm-card-head">
+      <h2 class="adm-card-title">{{ showHandled() ? 'All messages' : 'Waiting for a reply' }}</h2>
+      <label class="toggle adm-check">
+        <input type="checkbox" [checked]="showHandled()" (change)="showHandled.set(!showHandled()); pg.reset()" /> Show handled too
+      </label>
+    </div>
+
+    @if (loading()) {
+      <div class="adm-state state"><div class="adm-spinner"></div><p aria-busy="true">Loading messages…</p></div>
+    } @else if (failed()) {
+      <div class="adm-state state">
+        <p class="adm-error err">Could not load messages.</p>
+        <button type="button" class="adm-btn adm-btn--sm btn" (click)="load()">Retry</button>
+      </div>
+    } @else if (visible().length === 0) {
+      <div class="adm-state state"><p>{{ showHandled() ? 'No messages yet.' : 'Nothing waiting - you are all caught up.' }}</p></div>
+    } @else {
+      <ul class="messages">
+        @for (m of pg.items(); track m.id) {
+          <li class="message" [class.message--done]="m.handled">
+            <div class="top">
+              <strong>{{ m.name }}</strong>
+              <a class="adm-link" [href]="'mailto:' + m.email">{{ m.email }}</a>
+              @if (m.phone) { <a class="adm-link" [href]="'tel:' + m.phone">{{ m.phone }}</a> }
+              <time class="adm-muted">{{ m.createdAt | date: 'medium' }}</time>
+              @if (m.handled) { <span class="adm-badge adm-badge--success">handled</span> }
+            </div>
+            <p class="body">{{ m.message }}</p>
+            <div class="row">
+              <a class="adm-btn adm-btn--sm" [href]="replyLink(m)">Reply by email</a>
+              <button type="button" class="adm-btn adm-btn--sm" [disabled]="busy().has(m.id)" (click)="toggleHandled(m)">
+                {{ m.handled ? 'Mark as waiting' : 'Mark as handled' }}
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+      <app-pager
+        [total]="pg.total()"
+        [page]="pg.current()"
+        [pageSize]="pg.pageSize()"
+        (pageChange)="pg.goTo($event)"
+        (pageSizeChange)="pg.setSize($event)"
+      />
+    }
+  </section>
+</div>

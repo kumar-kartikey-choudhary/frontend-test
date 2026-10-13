@@ -1,4 +1,4 @@
-<main class="home-page-container">
+<div class="home-page-container">
   <section class="hero-banner">
     <div class="hero-overlay"></div>
     <div class="hero-content">
@@ -13,17 +13,16 @@
       </h2>
 
       <p>
-        Welcome to Pratik Dairy & Sweets, your trusted destination for unparalleled
-        <span class="highlight-gold">purity</span> and authentic taste. Dedicated to excellence, we
-        uphold the <span class="highlight-white">time-honored traditions</span> of Indian culinary
-        art, crafting every sweet and dairy product with meticulous care. Our commitment begins with
-        sourcing the purest milk, which forms the foundation of our high-quality
-        <span class="highlight-gold">paneer, ghee, and fresh dairy items</span>. Our handcrafted
-        confections are made using <span class="highlight-white">authentic recipes</span> and the
-        finest ingredients, promising a taste that is both nostalgic and supremely fresh. Experience
-        the true essence of Indian sweets and dairy—a
-        <span class="highlight-gold">legacy of purity</span> delivered right to you.
+        Your trusted destination for <span class="highlight-gold">pure dairy</span> and
+        <span class="highlight-white">traditional Indian sweets</span>. We source the purest milk and
+        turn it into fresh paneer, ghee and hand-crafted mithai - made daily, delivered fresh.
       </p>
+
+      <ul class="trust-points">
+        <li>Made fresh every day</li>
+        <li>Pure ghee, no preservatives</li>
+        <li>Order online, pay on delivery</li>
+      </ul>
 
       <div class="hero-actions">
         <a routerLink="/products/sweets" class="btn btn-primary">Order Sweets Online</a>
@@ -32,11 +31,29 @@
     </div>
   </section>
 
+  @if (featuredLoading() || featured().length) {
+    <section class="featured" aria-labelledby="featured-title">
+      <h2 id="featured-title">Fresh Picks Today</h2>
+      <div class="featured-grid">
+        @if (featuredLoading()) {
+          @for (i of skeletons; track i) {
+            <div class="pd-skeleton pd-skeleton--dark featured-skeleton" aria-hidden="true"></div>
+          }
+        } @else {
+          @for (product of featured(); track product.id) {
+            <app-product-card [product]="product" />
+          }
+        }
+      </div>
+      <a routerLink="/products" class="link-more featured-more">See the full range →</a>
+    </section>
+  }
+
   <section class="product-highlights">
     <h2>Our Signature Offerings</h2>
     <div class="highlight-grid">
       <div class="highlight-item">
-        <img src="assets/images/home/paneer.jpg" alt="Farm-Fresh Paneer" class="product-img" />
+        <img src="assets/images/home/paneer.jpg" alt="Farm-Fresh Paneer" class="product-img" width="400" height="300" loading="lazy" decoding="async" />
         <h3>Farm-Fresh Paneer</h3>
         <p>Made daily from 100% pure milk. Perfect for cooking or grilling.</p>
         <a routerLink="/products/dairy" class="link-more">Explore Dairy →</a>
@@ -47,6 +64,10 @@
           src="assets/images/home/mithai.jpg"
           alt="Handmade Festive Mithai"
           class="product-img"
+          width="400"
+          height="300"
+          loading="lazy"
+          decoding="async"
         />
         <h3>Handmade Festive Mithai</h3>
         <p>Prepared with traditional recipes, pure ghee, and zero preservatives.</p>
@@ -54,7 +75,7 @@
       </div>
 
       <div class="highlight-item">
-        <img src="assets/images/home/ghee.jpg" alt="Pure Cow Ghee" class="product-img" />
+        <img src="assets/images/home/ghee.jpg" alt="Pure Cow Ghee" class="product-img" width="400" height="300" loading="lazy" decoding="async" />
         <h3>Pure Cow Ghee</h3>
         <p>Aromatic, granular, and golden. The authentic taste of Indian tradition.</p>
         <a routerLink="/products/dairy" class="link-more">Shop Ghee →</a>
@@ -66,7 +87,7 @@
     <div class="promise-content">
       <h2>Our Promise of Purity</h2>
       <p>
-        For over 25 years, Pratik Dairy & Sweets has stood for uncompromising quality. We believe
+        For over {{ yearsInBusiness }} years, Pratik Dairy & Sweets has stood for uncompromising quality. We believe
         that the best products come from the best ingredients and traditional, time-tested
         processes. We source locally and produce with love.
       </p>
@@ -79,4 +100,4 @@
     <p>We offer quick local delivery and convenient store pickup.</p>
     <a routerLink="/contact" class="btn btn-primary">Find Our Location & Contact</a>
   </section>
-</main>
+</div>

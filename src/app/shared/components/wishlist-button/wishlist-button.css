@@ -1,0 +1,50 @@
+:host {
+  display: inline-block;
+}
+
+.heart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 25%);
+  border-radius: 50%;
+  background: rgb(11 19 43 / 70%);
+  cursor: pointer;
+  transition:
+    transform 150ms ease,
+    background 150ms ease;
+}
+
+.heart svg {
+  fill: transparent;
+  stroke: #fff;
+  transition:
+    fill 150ms ease,
+    stroke 150ms ease;
+}
+
+.heart:hover {
+  transform: scale(1.08);
+  background: rgb(11 19 43 / 90%);
+}
+
+.heart:focus-visible {
+  outline: 3px solid var(--pd-amber, #ffc107);
+  outline-offset: 2px;
+}
+
+.heart--saved svg {
+  fill: #ff4d6d;
+  stroke: #ff4d6d;
+}
+
+/* Floats over the top-right corner of a product picture. */
+:host(.on-card) {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  z-index: 2;
+}

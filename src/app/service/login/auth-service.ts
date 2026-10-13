@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Observable, finalize, firstValueFrom, shareReplay, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { StorageService } from '../../core/services/storage.service';
@@ -55,8 +55,12 @@ export class AuthService {
     return name ? name.charAt(0).toUpperCase() : '👤';
   });
 
+  /** The start-up refresh, while one is running - see {@link whenSessionReady}. */
+  private pendingRefresh: Promise<void> | null = null;
+
   constructor() {
     this.restoreSession();
+    this.refreshExpiredSessionInBackground();
   }
 
   // ---------------------------------------------------------------- session
@@ -81,6 +85,25 @@ export class AuthService {
   }
 
   /** A token that is present but expired is worse than no token at all. */
+  /**
+   * After a reload with an expired access token but a still-valid refresh token, quietly get a new
+   * access token instead of showing the user as signed out. Deferred a tick because the HTTP
+   * interceptors inject this service: calling out from the constructor would be a circular dependency.
+   */
+  private refreshExpiredSessionInBackground(): void {
+    if (!this.storage.isBrowser || this._state() !== null || !this.hasRefreshToken()) return;
+    this.pendingRefresh = Promise.resolve()
+      .then(() => firstValueFrom(this.refreshToken()))
+      .then(() => undefined)
+      .catch(() => this.clearStorage()) // refresh token expired or revoked: genuinely signed out
+      .finally(() => (this.pendingRefresh = null));
+  }
+
+  /** Resolves once any start-up session refresh has finished, so route guards don't act on a half-restored session. */
+  whenSessionReady(): Promise<void> {
+    return this.pendingRefresh ?? Promise.resolve();
+  }
+
   isTokenExpired(token = this.getToken()): boolean {
     if (!token) return true;
     const payload = decodeJwt(token);
@@ -116,20 +139,61 @@ export class AuthService {
    * a 401, not normally something components call directly.
    */
   refreshToken(): Observable<RefreshTokenResponse> {
-    const refreshToken = this.storage.get(REFRESH_TOKEN_KEY);
+    // One refresh at a time. Refresh tokens are single-use, so when several requests find the access
+    // token expired together they must share one refresh: a second call would present the token the
+    // first just revoked and the server would reject it, signing the user out.
+    if (!this.refreshInFlight) {
+      const refreshToken = this.storage.get(REFRESH_TOKEN_KEY);
+      this.refreshInFlight = this.http
+        .post<RefreshTokenResponse>(`${this.authApiUrl}/refresh-token`, { refreshToken })
+        .pipe(
+          tap((response) => this.storeSession(response)),
+          finalize(() => (this.refreshInFlight = null)),
+          shareReplay({ bufferSize: 1, refCount: false }),
+        );
+    }
+    return this.refreshInFlight;
+  }
+
+  private refreshInFlight: Observable<RefreshTokenResponse> | null = null;
+
+  private storeSession(response: RefreshTokenResponse): void {
+    this.storage.set(TOKEN_KEY, response.token);
+    this.storage.set(REFRESH_TOKEN_KEY, response.refreshToken);
+    this._state.set({ token: response.token, username: response.username, role: response.role });
+  }
+
+  /**
+   * Deletes the signed-in customer's own account (after re-checking their password). The server ends every
+   * session, so this signs out locally without trying to call logout for a refresh token that no longer exists.
+   */
+  deleteAccount(password: string): Observable<void> {
+    return this.http.post<void>(`${this.authApiUrl}/delete-account`, { password }).pipe(
+      tap(() => {
+        this.clearStorage();
+        this._state.set(null);
+      }),
+    );
+  }
+
+  /** Asks the server to email a reset link. It answers the same way whether or not the address has an account. */
+  requestPasswordReset(email: string): Observable<void> {
+    return this.http.post<void>(`${this.authApiUrl}/forgot-password`, { email });
+  }
+
+  /** Sets a new password using the token from the emailed link (single use, expires). */
+  resetPassword(token: string, newPassword: string): Observable<void> {
+    return this.http.post<void>(`${this.authApiUrl}/reset-password`, { token, newPassword });
+  }
+
+  /**
+   * Changes the signed-in user's own password. The server checks the current one, signs every other
+   * session out, and returns fresh tokens for this session, which are stored so the user stays signed in.
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<RefreshTokenResponse> {
     return this.http
-      .post<RefreshTokenResponse>(`${this.authApiUrl}/refresh-token`, { refreshToken })
-      .pipe(
-        tap((response) => {
-          this.storage.set(TOKEN_KEY, response.token);
-          this.storage.set(REFRESH_TOKEN_KEY, response.refreshToken);
-          this._state.set({
-            token: response.token,
-            username: response.username,
-            role: response.role,
-          });
-        }),
-      );
+      .post<RefreshTokenResponse>(`${this.authApiUrl}/change-password`, { currentPassword, newPassword })
+      .pipe(tap((response) => this.storeSession(response)));
   }
 
   hasRefreshToken(): boolean {

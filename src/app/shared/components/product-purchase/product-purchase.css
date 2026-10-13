@@ -1,0 +1,162 @@
+:host {
+  display: block;
+}
+
+.purchase {
+  display: grid;
+  gap: var(--pd-space-3);
+}
+
+.weights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--pd-space-2);
+}
+
+.pill {
+  padding: 0.3rem 0.85rem;
+  border: 1px solid var(--pd-border);
+  border-radius: var(--pd-radius-pill);
+  background: transparent;
+  color: var(--pd-text-light);
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.pill:hover:not(:disabled) {
+  border-color: var(--pd-primary);
+  color: var(--pd-primary);
+}
+
+.pill--active {
+  background: var(--pd-primary);
+  border-color: var(--pd-primary);
+  color: var(--pd-white);
+  font-weight: 700;
+}
+
+.pill:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pd-space-3);
+  padding-top: var(--pd-space-3);
+  border-top: 1px solid var(--pd-border);
+}
+
+.price {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--pd-primary);
+}
+
+.price small {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--pd-text-muted);
+}
+
+.btn {
+  min-width: 8.5rem;
+  min-height: 2.6rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: var(--pd-border);
+  color: var(--pd-text-muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.btn--add {
+  background: var(--pd-primary);
+  color: var(--pd-white);
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.btn--add:hover:not(:disabled) {
+  background: var(--pd-primary);
+  transform: translateY(-1px);
+}
+
+.btn--add:disabled {
+  opacity: 0.7;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  min-width: 8.5rem;
+  min-height: 2.6rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: var(--pd-cart-pink);
+  color: var(--pd-white);
+}
+
+.step {
+  flex: 0 0 2.75rem;
+  align-self: stretch;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.step:hover:not(:disabled) {
+  background: var(--pd-border);
+}
+
+.step:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.qty {
+  flex: 1;
+  text-align: center;
+  font-weight: 700;
+}
+
+.purchase--detail .price {
+  font-size: 2rem;
+}
+
+.purchase--detail .btn,
+.purchase--detail .stepper {
+  min-height: 3rem;
+  min-width: 11rem;
+}
+
+.purchase--detail .pill {
+  padding: 0.45rem 1.1rem;
+  font-size: 0.95rem;
+}
+
+.in-cart {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--pd-muted);
+}
+
+.in-cart-line--picked {
+  font-weight: 700;
+  color: var(--pd-primary-dark);
+}

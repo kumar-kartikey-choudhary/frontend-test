@@ -10,12 +10,14 @@ import { StorageService } from '../core/services/storage.service';
  * always fail and the pre-rendered HTML was a redirect. We let the server pass
  * and re-evaluate in the browser, which is where the session actually lives.
  */
-export const authGuardGuard: CanActivateFn = (_route, state) => {
+export const authGuardGuard: CanActivateFn = async (_route, state) => {
   const authService = inject(AuthService);
   const router = inject(Router);
   const storage = inject(StorageService);
 
   if (!storage.isBrowser) return true;
+
+  await authService.whenSessionReady(); // a reload may still be exchanging the refresh token
 
   if (authService.isLoggedIn() && authService.isAdmin()) return true;
 

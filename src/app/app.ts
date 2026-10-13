@@ -6,12 +6,13 @@ import { Footer } from './footer/footer';
 import { AuthService } from './service/login/auth-service';
 import { AdminHeader } from './admin/pages/admin-header/admin-header';
 import { ToastHost } from './shared/components/toast/toast';
+import { ConfirmDialog } from './shared/components/confirm-dialog/confirm-dialog';
 import { LoadingBar } from './shared/components/loading-bar/loading-bar';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, Header, Footer, AdminHeader, ToastHost, LoadingBar],
+  imports: [RouterOutlet, Header, Footer, AdminHeader, ToastHost, LoadingBar, ConfirmDialog],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })

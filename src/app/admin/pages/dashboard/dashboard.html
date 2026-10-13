@@ -1,105 +1,109 @@
-<div class="dashboard-container">
-
-    <div class="dashboard-header">
-        <h1>Dashboard Overview</h1>
-        <button (click)="loadDashboard()" class="btn-refresh">Refresh</button>
+<div class="adm-page">
+  <header class="adm-head">
+    <div>
+      <h1 class="adm-title">Dashboard</h1>
+      <p class="adm-sub">How the shop is doing today.</p>
     </div>
+    <div class="adm-head-actions">
+      <button type="button" class="adm-btn" (click)="loadDashboard()" [disabled]="isLoading">
+        {{ isLoading ? 'Refreshing…' : 'Refresh' }}
+      </button>
+    </div>
+  </header>
 
-    @if (isLoading) {
-        <p class="loading-message">Loading dashboard data...</p>
-    }
+  @if (isLoading) {
+    <div class="adm-state" aria-busy="true">
+      <div class="adm-spinner"></div>
+      <p>Loading dashboard data…</p>
+    </div>
+  }
 
-    @if (errorMsg) {
-        <div class="error-message-box">
-            <p>{{ errorMsg }}</p>
-            <button (click)="loadDashboard()" class="btn-retry">Retry</button>
+  @if (errorMsg) {
+    <div class="adm-banner adm-banner--error" role="alert">
+      <p>{{ errorMsg }}</p>
+      <button type="button" class="adm-btn adm-btn--sm" (click)="loadDashboard()">Retry</button>
+    </div>
+  }
+
+  @if (!isLoading && !errorMsg) {
+    <section class="adm-stats" aria-label="Key figures">
+      @for (kpi of kpis; track kpi.title) {
+        <div class="adm-stat" [class]="'adm-stat--' + kpi.colorClass">
+          <span class="adm-stat-label">{{ kpi.title }}</span>
+          <span class="adm-stat-value" [class]="'adm-stat-value--' + kpi.colorClass">{{ kpi.value }}</span>
+          <span class="adm-stat-note">{{ kpi.detail }}</span>
         </div>
-    }
+      }
+    </section>
 
-    @if (!isLoading && !errorMsg) {
-        <!-- Simple KPI Cards -->
-        <section class="kpi-section">
-            @for (kpi of kpis; track kpi.title) {
-                <div class="kpi-card" [class]="'kpi-card-' + kpi.colorClass">
-                    <h3>{{ kpi.title }}</h3>
-                    <p class="value" [class]="kpi.colorClass">{{ kpi.value }}</p>
-                    <span class="detail">{{ kpi.detail }}</span>
-                </div>
+    <section class="panels">
+      <div class="adm-card">
+        <div class="adm-card-head">
+          <h2 class="adm-card-title">Recent orders · latest {{ recentOrders.length }}</h2>
+          <a routerLink="/admin/orders" class="adm-link">View all orders →</a>
+        </div>
+
+        @if (recentOrders.length > 0) {
+          <div class="adm-table-wrap">
+            <table class="adm-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th class="num">Total</th>
+                  <th>Status</th>
+                  <th><span class="pd-visually-hidden">Action</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (order of recentOrders; track order.id) {
+                  <tr>
+                    <td class="adm-mono" [title]="'#' + order.id">
+                      #{{ order.id.length > 10 ? order.id.substring(0, 8) + '…' : order.id }}
+                    </td>
+                    <td>{{ order.customer }}</td>
+                    <td class="num adm-amount">₹ {{ order.total | number: '1.0-0' }}</td>
+                    <td>
+                      <span class="adm-badge" [class]="badgeFor(order.status)">
+                        {{ order.status.toLowerCase() }}
+                      </span>
+                    </td>
+                    <td class="right"><a routerLink="/admin/orders" class="adm-link">View</a></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <div class="adm-state"><p>No orders yet.</p></div>
+        }
+      </div>
+
+      <div class="adm-card">
+        <div class="adm-card-head">
+          <h2 class="adm-card-title">Stock · lowest {{ stockItems.length }} products</h2>
+          <a routerLink="/admin/product" class="adm-link">Manage products →</a>
+        </div>
+
+        @if (stockItems.length > 0) {
+          <ul class="adm-list">
+            @for (item of stockItems; track item.name) {
+              <li>
+                <span class="adm-strong">{{ item.name }}</span>
+                <span class="stock">
+                  <span class="adm-badge" [class]="stockBadge(item)">{{ stockLabel(item) }}</span>
+                  @if (item.stock <= item.threshold) {
+                    <span class="adm-muted">restock soon</span>
+                  }
+                </span>
+              </li>
             }
-        </section>
+          </ul>
+        } @else {
+          <div class="adm-state"><p>No products yet.</p></div>
+        }
+      </div>
 
-        <!-- Main Panels Layout -->
-        <section class="activity-section">
-
-            <!-- Recent Orders -->
-            <div class="panel recent-orders-panel">
-                <div class="panel-header">
-                    <h2>Recent Orders</h2>
-                    <a routerLink="/admin/orders" class="view-all-link">View All Orders →</a>
-                </div>
-
-                @if (recentOrders.length > 0) {
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Order ID</th>
-                                    <th>Customer</th>
-                                    <th>Total</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (order of recentOrders; track order.id) {
-                                    <tr>
-                                        <!-- Substring use kiya hai pipe error se bachne ke liye -->
-                                        <td class="id-cell" [title]="'#' + order.id">
-                                            #{{ order.id.length > 10 ? order.id.substring(0, 8) + '...' : order.id }}
-                                        </td>
-                                        <td>{{ order.customer }}</td>
-                                        <td class="price-cell">₹ {{ order.total | number:'1.0-0' }}</td>
-                                        <td>
-                                            <span class="status-tag" [class]="'status-' + order.status.toLowerCase()">
-                                                {{ order.status }}
-                                            </span>
-                                        </td>
-                                        <td><a routerLink="/admin/orders" class="action-link">View</a></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                } @else {
-                    <p class="no-data-message">No orders yet.</p>
-                }
-            </div>
-
-            <!-- Low Stock Inventory -->
-            <div class="panel inventory-snapshot-panel">
-                <div class="panel-header">
-                    <h2>Inventory Snapshot (Low Stock)</h2>
-                    <a routerLink="/admin/product" class="view-all-link">Manage Products →</a>
-                </div>
-
-                @if (lowStockItems.length > 0) {
-                    <ul class="inventory-list">
-                        @for (item of lowStockItems; track item.name) {
-                            <li [class.alert]="item.stock <= item.threshold">
-                                <span class="item-name">{{ item.name }}</span>
-                                <div class="stock-info">
-                                    <span class="item-stock">Stock: {{ item.stock }}</span>
-                                    <span class="item-threshold">(Threshold: {{ item.threshold }})</span>
-                                </div>
-                            </li>
-                        }
-                    </ul>
-                } @else {
-                    <p class="no-data-message">All products are well stocked.</p>
-                }
-            </div>
-
-        </section>
-    }
-
+    </section>
+  }
 </div>

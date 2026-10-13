@@ -1,0 +1,41 @@
+<div class="auth-page-container">
+  <div class="glow-orb orb-1"></div>
+  <div class="glow-orb orb-2"></div>
+  <div class="glow-orb orb-3"></div>
+
+  <div class="auth-panel-wrapper">
+    <div class="auth-panel">
+      <div class="brand-header">
+        <div class="logo-container">
+          <img src="assets/images/pratik-dairy-logo.png" alt="Pratik Dairy Logo" class="logo-img" />
+        </div>
+        <h2>Confirm your email</h2>
+      </div>
+
+      @switch (state()) {
+        @case ('checking') {
+          <p class="intro-text" aria-busy="true">Checking your link…</p>
+        }
+        @case ('verified') {
+          <div class="pd-alert pd-alert--success form-alert" role="status">
+            Thanks - your email address is confirmed.
+          </div>
+          <a [routerLink]="auth.isLoggedIn() ? '/account' : '/login'" class="btn-submit">
+            <span>{{ auth.isLoggedIn() ? 'Go to my account' : 'Log in' }}</span>
+          </a>
+        }
+        @case ('failed') {
+          <div class="pd-alert pd-alert--error form-alert" role="alert">{{ message() }}</div>
+          @if (auth.isLoggedIn()) {
+            <button type="button" class="btn-submit" [disabled]="resending()" (click)="resend()">
+              <span>{{ resending() ? 'Sending…' : 'Send me a new link' }}</span>
+            </button>
+          } @else {
+            <p class="intro-text">Log in to your account and ask for a new link from your profile.</p>
+            <a routerLink="/login" class="btn-submit"><span>Log in</span></a>
+          }
+        }
+      }
+    </div>
+  </div>
+</div>

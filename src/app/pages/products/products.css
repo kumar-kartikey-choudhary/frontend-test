@@ -1,40 +1,31 @@
 /* src/app/pages/products/products.component.css */
 
 /* Use the same color variables for consistency */
-:root {
-  --dark-bg: #1e1e2d;
-  --dark-surface: #262948;
-  --primary-accent: #ff8f00;
-  --secondary-accent: #ffc107;
-  --text-light: #f4f4f4;
-  --text-muted: #a0a0a0;
-}
-
 .products-page-container {
-  background-color: var(--dark-bg);
+  background-color: var(--pd-bg);
   min-height: 80vh;
 }
 
 /* --- PAGE HEADER BANNER --- */
 .page-header-banner {
-  background-color: var(--dark-surface);
-  padding: 60px 20px;
+  padding: 4rem 1.25rem;
   text-align: center;
-  color: var(--text-light);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  background-color: var(--pd-surface-2);
+  border-bottom: 1px solid var(--pd-border);
+  color: var(--pd-text);
 }
 
 .page-header-banner h1 {
-  font-size: 3em;
-  color: var(--secondary-accent);
-  margin-bottom: 10px;
-  text-transform: uppercase;
+  margin: 0 0 0.5rem;
+  font-family: var(--pd-font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: var(--pd-text);
 }
 
 .page-header-banner p {
-  font-size: 1.1em;
-  font-weight: 300;
-  color: var(--text-muted);
+  margin: 0;
+  font-size: 1.1rem;
+  color: var(--pd-muted);
 }
 
 /* --- CATEGORY LISTING SECTION --- */
@@ -46,10 +37,10 @@
 }
 
 .category-listing-section h2 {
+  font-family: var(--pd-font-display);
   font-size: 2.5em;
-  color: var(--secondary-accent);
+  color: var(--pd-text);
   margin-bottom: 60px;
-  text-transform: uppercase;
 }
 
 /* --- CATEGORY CARD GRID --- */
@@ -64,7 +55,8 @@
   border-radius: 12px;
   text-decoration: none;
   color: var(--text-light);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--pd-border);
+  box-shadow: var(--pd-shadow-sm);
   overflow: hidden;
   transition:
     transform 0.3s,
@@ -75,7 +67,7 @@
 
 .category-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7);
+  box-shadow: var(--pd-shadow);
 }
 
 .card-image-wrapper {
@@ -90,7 +82,7 @@
   background-position: center;
   transition: transform 0.5s;
   /* Optional: Placeholder if image is missing */
-  background-color: #4a5c70;
+  background-color: var(--pd-surface-2);
 }
 
 .category-card:hover .card-image {
@@ -105,10 +97,10 @@
 
 .card-body h3 {
   font-size: 1.8em;
-  color: var(--secondary-accent);
+  color: var(--pd-text);
   margin-top: 0;
   margin-bottom: 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--pd-border);
   padding-bottom: 10px;
 }
 
@@ -128,7 +120,7 @@
 }
 
 .category-card:hover .btn-view {
-  color: #ffaa33;
+  color: var(--pd-primary-dark);
   text-decoration: underline;
 }
 
@@ -136,13 +128,14 @@
 .cta-section {
   text-align: center;
   padding: 80px 20px;
-  background-color: var(--dark-surface);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+  background-color: var(--pd-surface-2);
+  border-top: 1px solid var(--pd-border);
   color: var(--text-light);
 }
 
 .cta-section h2 {
-  color: var(--primary-accent);
+  font-family: var(--pd-font-display);
+  color: var(--pd-text);
   font-size: 2.5em;
   margin-bottom: 25px;
 }
@@ -155,7 +148,7 @@
 /* Reuse Button Styling from Home Component (for simplicity, assumed copied or shared) */
 .btn-primary {
   background-color: var(--primary-accent);
-  color: var(--dark-bg);
+  color: var(--pd-white);
   border: 2px solid var(--primary-accent);
   text-decoration: none;
   padding: 14px 30px;
@@ -164,7 +157,7 @@
   text-transform: uppercase;
 }
 .btn-primary:hover {
-  background-color: #ffaa33;
+  background-color: var(--pd-primary-dark);
 }
 
 /* --- MEDIA QUERIES --- */
@@ -172,4 +165,11 @@
   .category-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.card-image--emoji {
+  display: grid;
+  place-items: center;
+  font-size: 4rem;
+  background: var(--pd-dark-surface);
 }

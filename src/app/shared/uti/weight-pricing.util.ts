@@ -60,3 +60,12 @@ export function defaultWeightFor(productBaseUnit: string | null | undefined): st
   const normalized = productBaseUnit?.trim().toLowerCase();
   return normalized && (SELECTABLE_WEIGHTS as string[]).includes(normalized) ? normalized : '1kg';
 }
+
+/**
+ * True when the unit is a weight (kg, g, 500g ...), so the 250g/500g/1kg pack-size selector makes
+ * sense. Counted units like "pcs", "box" or "litre" are sold as-is at their listed price.
+ */
+export function isWeightBased(productBaseUnit: string | null | undefined): boolean {
+  const u = productBaseUnit?.trim().toLowerCase().replace(/\s+/g, '');
+  return !!u && /^(\d+(\.\d+)?)?(kg|g|gms)$/.test(u);
+}

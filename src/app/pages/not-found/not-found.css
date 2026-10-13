@@ -39,7 +39,7 @@
 }
 .nf__btn--primary {
   background: var(--pd-primary, #b8860b);
-  color: #fff;
+  color: var(--pd-white);
 }
 .nf__btn:hover {
   opacity: 0.88;

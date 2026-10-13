@@ -1,4 +1,4 @@
-<main class="auth-page-container">
+<div class="auth-page-container">
   <!-- Decorative ambient light orbs -->
   <div class="glow-orb orb-1"></div>
   <div class="glow-orb orb-2"></div>
@@ -14,15 +14,26 @@
         <p class="intro-text">Please sign in to access your dashboard and place orders.</p>
       </div>
 
+      @if (infoMessage(); as info) {
+        <div class="pd-alert pd-alert--info form-alert" role="status">{{ info }}</div>
+      }
+      @if (errorMessage(); as error) {
+        <div class="pd-alert pd-alert--error form-alert" role="alert">{{ error }}</div>
+      }
+
       <form class="auth-form" (ngSubmit)="onLogin()">
         <div class="input-group">
-          <label for="username">Username / Email</label>
+          <label for="username">Username</label>
           <input
             type="text"
             id="username"
-            placeholder="Enter your username or email"
+            placeholder="Enter your username"
             [(ngModel)]="loginForm.username"
             name="username"
+            autocomplete="username"
+            autocapitalize="none"
+            spellcheck="false"
+            [attr.aria-invalid]="errorMessage() ? true : null"
             required
           />
         </div>
@@ -30,23 +41,41 @@
         <div class="input-group">
           <div class="password-header">
             <label for="password">Password</label>
-            <a routerLink="/forgot-password" class="forgot-link">Forgot Password?</a>
+            <a routerLink="/forgot-password" class="forgot-link">Forgot password?</a>
           </div>
-          <input
-            type="password"
-            id="password"
-            placeholder="Enter your password"
-            [(ngModel)]="loginForm.password"
-            name="password"
-            required
-          />
+          <div class="password-field">
+            <input
+              [type]="showPassword() ? 'text' : 'password'"
+              id="password"
+              placeholder="Enter your password"
+              [(ngModel)]="loginForm.password"
+              name="password"
+              autocomplete="current-password"
+              [attr.aria-invalid]="errorMessage() ? true : null"
+              required
+            />
+            <button
+              type="button"
+              class="toggle-password"
+              [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'"
+              [attr.aria-pressed]="showPassword()"
+              (click)="togglePasswordVisibility()"
+            >
+              {{ showPassword() ? 'Hide' : 'Show' }}
+            </button>
+          </div>
         </div>
 
-        <button type="submit" class="btn-submit">
-          <span>Log In Securely</span>
-          <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
-          </svg>
+        <button type="submit" class="btn-submit" [disabled]="submitting()">
+          @if (submitting()) {
+            <span class="pd-spinner" aria-hidden="true"></span>
+            <span>Signing in…</span>
+          } @else {
+            <span>Log In Securely</span>
+            <svg class="arrow-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          }
         </button>
       </form>
 
@@ -56,4 +85,4 @@
       </div>
     </div>
   </div>
-</main>
+</div>

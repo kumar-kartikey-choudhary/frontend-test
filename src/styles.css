@@ -1,25 +1,48 @@
 /* ============================================================================
    Pratik Dairy — global design tokens & base styles
-   ----------------------------------------------------------------------------
-   The original stylesheet was 5 lines and every component re-invented its own
-   colours, spacing and buttons. These tokens give the app one palette,
-   one type scale and consistent focus/motion behaviour.
    ========================================================================== */
 
-:root {
-  /* Brand palette — warm dairy/mithai tones */
-  --pd-primary: #b8860b;
-  --pd-primary-dark: #8f6809;
-  --pd-primary-soft: #fdf6e3;
-  --pd-accent: #c1440e;
-  --pd-success: #1f7a4d;
-  --pd-danger: #b3261e;
+@import './app/admin/admin.css';
 
-  --pd-bg: #fffdf8;
+:root {
+  /* ---- Palette: "cream & saffron" -------------------------------------------------
+     One light page colour for the whole site (customer and admin), a single saffron
+     accent, and warm espresso for the header / footer / admin sidebar. Everything else
+     in the app should reference these tokens rather than hard-coding colours. */
+
+  /* Page */
+  --pd-bg: #faf6ef;
   --pd-surface: #ffffff;
-  --pd-text: #2b2b2b;
-  --pd-muted: #6b6b6b;
-  --pd-border: #e7e1d4;
+  --pd-surface-2: #f5efe4;
+  --pd-text: #2a211b;
+  --pd-muted: #756a5f;
+  --pd-border: #e8dfd0;
+
+  /* Brand accent (white text on --pd-primary passes AA) */
+  --pd-primary: #b45f06;
+  --pd-primary-dark: #8f4a04;
+  --pd-primary-soft: #fbf0e0;
+  --pd-accent: #9a3412;
+
+  /* Status */
+  --pd-success: #2f7d4f;
+  --pd-success-soft: #e6f3ec;
+  --pd-danger: #b3261e;
+  --pd-danger-soft: #fbe9e7;
+  --pd-warning: #9a6a0a;
+  --pd-warning-soft: #fdf1d6;
+  --pd-info: #2c6a8f;
+  --pd-info-soft: #e5f0f7;
+
+  /* Dark chrome: storefront header / footer and the admin sidebar - warm espresso brown with gold.
+     Change these few values to recolour all three. */
+  --pd-chrome: #2b2119;
+  --pd-chrome-2: #3a2d23;
+  --pd-chrome-deep: #1f1711;
+  --pd-chrome-line: rgb(255 255 255 / 12%);
+  --pd-chrome-text: #f3ece1;
+  --pd-chrome-muted: #b9ac9b;
+  --pd-chrome-accent: #f0b45a;
 
   /* Spacing scale */
   --pd-space-1: 0.25rem;
@@ -32,9 +55,39 @@
 
   --pd-radius: 0.75rem;
   --pd-radius-pill: 999px;
-  --pd-shadow-sm: 0 1px 2px rgb(0 0 0 / 6%);
-  --pd-shadow: 0 6px 18px rgb(0 0 0 / 8%);
+  --pd-shadow-sm: 0 1px 2px rgb(43 33 25 / 6%);
+  --pd-shadow: 0 8px 24px rgb(43 33 25 / 10%);
 
+  /* Raw colours still referenced by older component stylesheets. */
+  --pd-white: #ffffff;
+  --pd-ink: #2a211b;
+  --pd-navy: var(--pd-chrome);
+  --pd-gold: #f0b45a;
+  --pd-amber: #e8a33d;
+  --pd-orange: #c8791a;
+  --pd-honey: var(--pd-chrome-accent);
+  --pd-sunset: #d98a2b;
+  --pd-gray-300: #e0d6c6;
+  --pd-gray-400: #a39686;
+  --pd-slate: #756a5f;
+
+  /* The old dark "browsing" theme now resolves to the same light page colours. */
+  --pd-dark-bg: var(--pd-bg);
+  --pd-dark-surface: var(--pd-surface);
+  --pd-cart-pink: var(--pd-primary);
+  --pd-text-light: var(--pd-text);
+  --pd-text-muted: var(--pd-muted);
+
+  /* Legacy names still referenced by older component stylesheets. */
+  --dark-bg: var(--pd-dark-bg);
+  --dark-surface: var(--pd-dark-surface);
+  --primary-accent: var(--pd-primary);
+  --secondary-accent: var(--pd-primary);
+  --text-light: var(--pd-text);
+  --text-muted: var(--pd-muted);
+  --cart-pink: var(--pd-primary);
+
+  --pd-font-display: Georgia, 'Times New Roman', serif;
   --pd-font: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
   --pd-container: 1200px;
 }
@@ -163,7 +216,7 @@ main {
 
 /* Skeleton placeholder for loading lists */
 .pd-skeleton {
-  background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%);
+  background: linear-gradient(90deg, #efe8da 25%, #f7f2e8 37%, #efe8da 63%);
   background-size: 400% 100%;
   animation: pd-shimmer 1.3s ease infinite;
   border-radius: var(--pd-radius);
@@ -184,5 +237,175 @@ main {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+
+/* ---------------------------------------------------------------- dropdowns (<select>)
+   Browsers that support customisable selects (Chrome / Edge 135+) get the themed list below:
+   rounded panel, saffron tint on the hovered / chosen row, a tick on the chosen one. Other browsers
+   keep their native list, tinted with the same accent. Component styles can still restyle the
+   closed box; these rules only set the baseline and the open list. */
+
+select {
+  accent-color: var(--pd-primary);
+}
+
+option {
+  color: var(--pd-text);
+  background: var(--pd-surface);
+}
+
+@supports (appearance: base-select) {
+  select,
+  ::picker(select) {
+    appearance: base-select;
+  }
+
+  select {
+    font: inherit;
+    color: var(--pd-text);
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-gray-300);
+    border-radius: 0.55rem;
+    cursor: pointer;
+  }
+
+  select::picker-icon {
+    color: var(--pd-muted);
+    transition: rotate 160ms ease;
+  }
+
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+
+  ::picker(select) {
+    box-sizing: border-box;
+    min-width: anchor-size(width);
+    margin-block: 0.35rem;
+    padding: 0.35rem;
+    color: var(--pd-text);
+    background: var(--pd-surface);
+    border: 1px solid var(--pd-border);
+    border-radius: 0.8rem;
+    box-shadow: var(--pd-shadow);
+  }
+
+  option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.8rem;
+    font: inherit;
+    border-radius: 0.5rem;
+    cursor: pointer;
+  }
+
+  option:hover,
+  option:focus-visible {
+    color: var(--pd-primary-dark);
+    background: var(--pd-primary-soft);
+    outline: none;
+  }
+
+  option:checked {
+    font-weight: 650;
+    color: var(--pd-primary-dark);
+    background: var(--pd-primary-soft);
+  }
+
+  option:disabled {
+    color: var(--pd-gray-400);
+    cursor: not-allowed;
+  }
+
+  option::checkmark {
+    order: 1;
+    margin-left: auto;
+    color: var(--pd-primary);
+  }
+}
+
+/* ---------------------------------------------------------------- shared utilities */
+
+.pd-visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Inline status banners (errors, info, success) with an icon-free, high-contrast look. */
+.pd-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--pd-space-3);
+  padding: var(--pd-space-3) var(--pd-space-4);
+  border-radius: var(--pd-radius);
+  border: 1px solid transparent;
+  font-size: 0.95rem;
+}
+.pd-alert--error {
+  background: var(--pd-danger-soft);
+  border-color: #f0c4bf;
+  color: #7a1712;
+}
+.pd-alert--info {
+  background: var(--pd-info-soft);
+  border-color: #bcd7e8;
+  color: #1d4a66;
+}
+.pd-alert--success {
+  background: var(--pd-success-soft);
+  border-color: #b7dcc7;
+  color: #1c5a38;
+}
+
+.pd-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: pd-spin 0.7s linear infinite;
+  vertical-align: -0.125em;
+}
+@keyframes pd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Skeleton used by product grids */
+.pd-skeleton--dark {
+  background: linear-gradient(90deg, #efe8da 25%, #f7f2e8 37%, #efe8da 63%);
+  background-size: 400% 100%;
+}
+
+/* Printing (e.g. an invoice): drop the site chrome and anything marked no-print, and use plain black on white. */
+@media print {
+  .top-ticker,
+  header.pratik-header,
+  app-header,
+  app-admin-header,
+  app-footer,
+  app-toast-host,
+  app-confirm-dialog,
+  app-loading-bar,
+  .skip-link,
+  .adm-side,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
   }
 }

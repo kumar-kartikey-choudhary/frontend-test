@@ -17,4 +17,9 @@ export class AdminService {
   getAllUsers(): Observable<UserDto[]> {
     return this.http.get<UserDto[]>(this.apiUrl);
   }
+
+  /** Deletes a customer's account: personal data is erased and they can no longer sign in. Their orders stay on record. */
+  deleteUser(id: string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiBaseUrl}/users/delete/${id}`);
+  }
 }

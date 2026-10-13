@@ -2,7 +2,7 @@
 
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CommonModule, SlicePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { forkJoin } from 'rxjs';
 import { AdminService } from '../../service/admin-service';
 import { OrderAdminService, OrderResponse } from '../../service/order-admin-service';
@@ -12,7 +12,7 @@ interface Kpi {
   title: string;
   value: string;
   detail: string;
-  colorClass: 'primary' | 'secondary' | 'danger' | 'info';
+  colorClass: 'primary' | 'success' | 'danger' | 'info';
 }
 
 interface RecentOrderRow {
@@ -22,9 +22,10 @@ interface RecentOrderRow {
   status: string;
 }
 
-interface LowStockItem {
+interface StockItem {
   name: string;
   stock: number;
+  unit: string;
   threshold: number;
 }
 
@@ -33,17 +34,20 @@ interface LowStockItem {
 // wire it up to a real field if one gets added to the product entity later.
 const LOW_STOCK_THRESHOLD = 10;
 
+/** How many orders / products the dashboard lists. */
+const RECENT_ROWS = 10;
+
 @Component({
   selector: 'app-admin-dashboard',
   templateUrl: './dashboard.html',
   styleUrls: ['./dashboard.css'],
   standalone: true,
-  imports: [RouterLink, DecimalPipe,SlicePipe],
+  imports: [RouterLink, DecimalPipe],
 })
 export class AdminDashboardComponent implements OnInit {
   kpis: Kpi[] = [];
   recentOrders: RecentOrderRow[] = [];
-  lowStockItems: LowStockItem[] = [];
+  stockItems: StockItem[] = [];
 
   isLoading = true;
   errorMsg = '';
@@ -70,15 +74,41 @@ export class AdminDashboardComponent implements OnInit {
       next: ({ orders, products, users }) => {
         this.buildKpis(orders, products as any[], users as any[]);
         this.buildRecentOrders(orders);
-        this.buildLowStockItems(products as any[]);
+        this.buildStockItems(products as any[]);
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Failed to load dashboard data:', err);
-        this.errorMsg = 'Could not load dashboard data. Is the backend running?';
+      error: () => {
+        this.errorMsg = 'Could not load dashboard data.';
         this.isLoading = false;
       },
     });
+  }
+
+  /** Badge colour for an order status. */
+  stockBadge(item: StockItem): string {
+    if (item.stock <= 0) return 'adm-badge--danger';
+    if (item.stock <= item.threshold) return 'adm-badge--warning';
+    return 'adm-badge--success';
+  }
+
+  stockLabel(item: StockItem): string {
+    if (item.stock <= 0) return 'Out of stock';
+    return `${item.stock} ${item.unit} left`.replace('  ', ' ').trim();
+  }
+
+  badgeFor(status: string): string {
+    switch (status.toUpperCase()) {
+      case 'DELIVERED':
+        return 'adm-badge--success';
+      case 'CANCELLED':
+        return 'adm-badge--danger';
+      case 'SHIPPED':
+        return 'adm-badge--info';
+      case 'CONFIRMED':
+        return 'adm-badge--brand';
+      default:
+        return 'adm-badge--warning';
+    }
   }
 
   private isSameDay(a: Date, b: Date): boolean {
@@ -122,7 +152,7 @@ export class AdminDashboardComponent implements OnInit {
         title: 'Weekly Revenue',
         value: `₹ ${weeklyRevenue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`,
         detail: 'Last 7 days',
-        colorClass: 'secondary',
+        colorClass: 'success',
       },
       {
         title: 'Low Stock Alerts',
@@ -145,7 +175,7 @@ export class AdminDashboardComponent implements OnInit {
   private buildRecentOrders(orders: OrderResponse[]): void {
     this.recentOrders = [...orders]
       .sort((a, b) => new Date(b.orderDateTime).getTime() - new Date(a.orderDateTime).getTime())
-      .slice(0, 5)
+      .slice(0, RECENT_ROWS)
       .map((o) => ({
         id: o.id,
         customer: o.username,
@@ -154,12 +184,15 @@ export class AdminDashboardComponent implements OnInit {
       }));
   }
 
-  private buildLowStockItems(products: any[]): void {
-    this.lowStockItems = products
-      .filter((p) => p.stockQuantity <= LOW_STOCK_THRESHOLD)
+  /** The products with the least stock first, so the ones that need restocking are at the top. */
+  private buildStockItems(products: any[]): void {
+    this.stockItems = [...products]
+      .sort((a, b) => (a.stockQuantity ?? 0) - (b.stockQuantity ?? 0))
+      .slice(0, RECENT_ROWS)
       .map((p) => ({
         name: p.productName,
-        stock: p.stockQuantity,
+        stock: p.stockQuantity ?? 0,
+        unit: p.stockUnit ?? '',
         threshold: LOW_STOCK_THRESHOLD,
       }));
   }

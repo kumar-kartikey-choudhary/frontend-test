@@ -1,0 +1,49 @@
+@if (dialogs.active(); as active) {
+  <div class="backdrop" (click)="cancel()">
+    <div
+      #panel
+      class="panel"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="confirm-title"
+      [attr.aria-describedby]="active.options.message ? 'confirm-message' : null"
+      (click)="$event.stopPropagation()"
+      (keydown)="trapFocus($event)"
+    >
+      <h2 id="confirm-title">{{ active.options.title }}</h2>
+      @if (active.options.message) {
+        <p id="confirm-message">{{ active.options.message }}</p>
+      }
+
+      @if (active.options.input; as input) {
+        <label class="field">
+          <span>{{ input.label }}@if (input.required) { <span aria-hidden="true"> *</span> }</span>
+          <textarea
+            rows="3"
+            [placeholder]="input.placeholder ?? ''"
+            [ngModel]="text()"
+            (ngModelChange)="text.set($event)"
+            [attr.aria-invalid]="touched() && invalid"
+          ></textarea>
+          @if (touched() && invalid) {
+            <span class="field-error" role="alert">This field is required.</span>
+          }
+        </label>
+      }
+
+      <div class="actions">
+        <button type="button" class="btn btn--cancel" (click)="cancel()">
+          {{ active.options.cancelText ?? 'Cancel' }}
+        </button>
+        <button
+          type="button"
+          class="btn btn--confirm"
+          [class.btn--danger]="active.options.tone === 'danger'"
+          (click)="confirm()"
+        >
+          {{ active.options.confirmText ?? 'Confirm' }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

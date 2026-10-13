@@ -38,10 +38,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401 && !isAuthEndpoint && authService.hasRefreshToken()) {
         return authService.refreshToken().pipe(
-          switchMap((refreshed) => {
-            const retried = req.clone({ setHeaders: { Authorization: `Bearer ${refreshed.token}` } });
-            return next(retried);
-          }),
+          // Only a failed *refresh* ends the session. This sits before the retry so an ordinary error
+          // from the retried request (a 409, a 500 ...) reaches the caller instead of logging the user out.
           catchError((refreshError) => {
             authService.logout();
             router.navigate(['/login'], {
@@ -49,10 +47,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             });
             return throwError(() => refreshError);
           }),
+          switchMap((refreshed) => {
+            const retried = req.clone({ setHeaders: { Authorization: `Bearer ${refreshed.token}` } });
+            return next(retried);
+          }),
         );
       }
 
-      if (error.status === 401) {
+      // Login and refresh failures are handled by their callers (a wrong password is just an error
+      // message; a failed refresh logs out below, or quietly at start-up) - don't also redirect here.
+      if (error.status === 401 && !isAuthEndpoint) {
         authService.logout();
         router.navigate(['/login'], {
           queryParams: { sessionExpired: true, returnUrl: router.url },

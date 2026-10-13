@@ -1,95 +1,168 @@
-<div class="order-management-container">
+<div class="adm-page">
+  <header class="adm-head">
+    <div>
+      <h1 class="adm-title">Orders</h1>
+      <p class="adm-sub">Track every order and move it through delivery.</p>
+    </div>
+  </header>
 
-    <h1><span class="icon">📦</span> Orders Management</h1>
-
-    <div class="controls-bar">
-        <div class="search-group">
-            <input
-                type="text"
-                placeholder="Search by Order ID or Customer Name..."
-                [(ngModel)]="searchTerm"
-                class="search-input"
-            >
-            <span class="search-icon">🔍</span>
-        </div>
-
-        <div class="filter-group">
-            <label for="status-filter">Filter by Status:</label>
-            <select id="status-filter" [(ngModel)]="selectedStatus" class="status-select">
-                @for (status of statusOptions; track status) {
-                    <option [value]="status">{{ status }}</option>
-                }
-            </select>
-        </div>
+  <div class="adm-card">
+    <div class="adm-toolbar">
+      <label class="pd-visually-hidden" for="order-search">Search orders</label>
+      <input
+        id="order-search"
+        type="search"
+        placeholder="Search by order ID or customer…"
+        class="adm-input adm-search"
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event); pg.reset()"
+      />
+      <span class="adm-spacer"></span>
+      <label class="adm-filter" for="status-filter">
+        Status
+        <select id="status-filter" class="adm-select" [ngModel]="selectedStatus()" (ngModelChange)="selectedStatus.set($event); pg.reset()">
+          @for (status of statusOptions; track status) {
+            <option [value]="status">{{ status === 'All' ? 'All' : statusLabels[status] }}</option>
+          }
+        </select>
+      </label>
     </div>
 
-    @if (isLoading) {
-        <p class="loading-message">Loading orders...</p>
-    }
+  @if (isLoading()) {
+    <div class="adm-state" aria-busy="true">
+      <div class="adm-spinner"></div>
+      <p>Loading orders…</p>
+    </div>
+  }
 
-    @if (errorMsg) {
-        <div class="error-message-box">
-            <p>{{ errorMsg }}</p>
-            <button (click)="loadOrders()" class="btn-retry">Retry</button>
-        </div>
-    }
+  @if (errorMsg()) {
+    <div class="adm-state">
+      <p class="adm-error">{{ errorMsg() }}</p>
+      <button type="button" (click)="loadOrders()" class="adm-btn adm-btn--sm">Retry</button>
+    </div>
+  }
 
-    @if (!isLoading && !errorMsg) {
-        <div class="order-table-panel panel">
-            <h2>Order List ({{ selectedStatus }})</h2>
+  @if (!isLoading() && !errorMsg()) {
+      @if (filteredOrders().length > 0) {
+        <div class="adm-table-wrap">
+        <table class="adm-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Placed</th>
+              <th class="num">Total</th>
+              <th>Coupon</th>
+              <th>Status</th>
+              <th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of pg.items(); track order.id) {
+              <tr>
+                <td class="adm-mono adm-strong">#{{ order.id.slice(0, 8) }}</td>
+                <td>{{ order.username }}</td>
+                <td class="nowrap">{{ order.orderDateTime | date: 'd MMM, h:mm a' }}</td>
+                <td class="num adm-amount">₹ {{ order.totalAmount | number: '1.2-2' }}</td>
+                <td>
+                  @if (order.couponCode) {
+                    <span class="adm-badge adm-badge--brand">{{ order.couponCode }} (-₹{{ order.discountAmount | number: '1.2-2' }})</span>
+                  } @else {
+                    <span class="adm-muted">—</span>
+                  }
+                </td>
+                <td>
+                  <span class="adm-badge" [class]="badgeFor(order.status)">
+                    {{ statusLabels[order.status] }}
+                  </span>
+                </td>
+                <td class="right actions-cell">
+                  <label class="pd-visually-hidden" [for]="'status-' + order.id">Change status of order {{ order.id.slice(0, 8) }}</label>
+                  <select
+                    class="adm-select adm-select--sm status-action-select"
+                    [id]="'status-' + order.id"
+                    [value]="order.status"
+                    [disabled]="isUpdating(order) || isFinal(order)"
+                    [attr.title]="isFinal(order) ? 'This order is ' + statusLabels[order.status].toLowerCase() + ' - its status can no longer be changed.' : null"
+                    (change)="changeStatus(order, $any($event.target))"
+                  >
+                    @for (s of assignableStatuses; track s) {
+                      <option [value]="s" [selected]="s === order.status">{{ statusLabels[s] }}</option>
+                    }
+                  </select>
+                  <button
+                    type="button"
+                    class="adm-btn adm-btn--sm"
+                    [attr.aria-expanded]="isExpanded(order)"
+                    (click)="toggleDetails(order)"
+                  >
+                    {{ isExpanded(order) ? 'Hide' : 'Details' }}
+                  </button>
+                </td>
+              </tr>
 
-            @if (filteredOrders.length > 0) {
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Order ID</th>
-                            <th>Customer</th>
-                            <th>Date & Time</th>
-                            <th>Total</th>
-                            <th>Coupon</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (order of filteredOrders; track order.id) {
-                            <tr>
-                                <td class="order-id">#{{ order.id }}</td>
-                                <td>{{ order.username }}</td>
-                                <td>{{ order.orderDateTime | date:'short' }}</td>
-                                <td class="total-col">₹ {{ order.totalAmount | number:'1.2-2' }}</td>
-                                <td>
-                                    @if (order.couponCode) {
-                                        <span class="coupon-badge">{{ order.couponCode }} (-₹{{ order.discountAmount | number:'1.2-2' }})</span>
-                                    } @else {
-                                        <span class="no-coupon">—</span>
-                                    }
-                                </td>
-                                <td>
-                                    <span [class]="'status-badge status-' + order.status.toLowerCase()">
-                                        {{ order.status }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <select
-                                        class="status-action-select"
-                                        [ngModel]="order.status"
-                                        (ngModelChange)="updateStatus(order.id, $event)"
-                                    >
-                                        @for (s of assignableStatuses; track s) {
-                                            <option [value]="s">{{ s }}</option>
-                                        }
-                                    </select>
-                                    <a routerLink="/admin/orders/{{ order.id }}" class="btn-view-details">Details</a>
-                                </td>
-                            </tr>
+              @if (isExpanded(order)) {
+                <tr class="detail-row">
+                  <td colspan="7">
+                    <div class="details-grid">
+                      <section>
+                        <h3>Items</h3>
+                        <ul class="detail-list">
+                          @for (item of order.items; track item.id) {
+                            <li>
+                              <span>{{ item.productName || item.productId }}</span>
+                              <span>{{ item.quantity }} × {{ item.weight || '—' }}</span>
+                              <span>₹ {{ item.subTotal | number: '1.2-2' }}</span>
+                            </li>
+                          }
+                        </ul>
+                      </section>
+
+                      <section>
+                        <h3>Deliver to</h3>
+                        @if (order.deliveryAddress; as a) {
+                          <address>
+                            @if (a.label) { <strong>{{ a.label }}</strong><br /> }
+                            {{ a.line1 }}@if (a.line2) {, {{ a.line2 }}}<br />
+                            {{ a.city }}, {{ a.state }} - {{ a.pincode }}
+                            @if (a.landmark) { <br />Landmark: {{ a.landmark }} }
+                            @if (a.contactPhone) { <br />Phone: {{ a.contactPhone }} }
+                          </address>
+                        } @else {
+                          <p class="adm-muted">No address recorded (order placed before addresses were collected).</p>
                         }
-                    </tbody>
-                </table>
-            } @else {
-                <p class="no-orders-message">No orders found matching the current filters.</p>
-            }
-        </div>
-    }
+                      </section>
 
+                      <section>
+                        <h3>History</h3>
+                        <ol class="detail-list">
+                          @for (entry of order.statusHistory; track entry.id) {
+                            <li>
+                              <span>{{ statusLabels[entry.status] }}</span>
+                              <span>{{ entry.remarks || '' }}</span>
+                              <span class="adm-muted">{{ entry.createdAt | date: 'short' }}</span>
+                            </li>
+                          }
+                        </ol>
+                      </section>
+                    </div>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+        </div>
+        <app-pager
+          [total]="pg.total()"
+          [page]="pg.current()"
+          [pageSize]="pg.pageSize()"
+          (pageChange)="pg.goTo($event)"
+          (pageSizeChange)="pg.setSize($event)"
+        />
+      } @else {
+        <div class="adm-state"><p><strong>No orders found</strong></p><p>Nothing matches the current search or filter.</p></div>
+      }
+  }
+  </div>
 </div>

@@ -1,77 +1,162 @@
 <div class="payment-container">
   <div class="payment-header">
-    <button class="back-btn" (click)="backToCart()">&larr; Back to Cart</button>
-    <h2>Choose Payment Method</h2>
+    <button type="button" class="back-btn" (click)="backToCart()">&larr; Back to Cart</button>
+    <h2>Checkout</h2>
   </div>
 
-  <div *ngIf="isLoading" class="loading-state">Loading...</div>
+  @if (loading()) {
+    <div class="loading-state" aria-busy="true"><span class="pd-spinner" aria-hidden="true"></span> Loading your checkout…</div>
+  } @else if (failed()) {
+    <div class="pd-alert pd-alert--error failure" role="alert">
+      <span>We couldn't load your checkout.</span>
+      <button type="button" class="retry-btn" (click)="load()">Try again</button>
+    </div>
+  } @else {
+    <div class="payment-content">
+      <div class="order-summary-section">
+        <h3>Order Summary</h3>
+        @for (item of items(); track item.productId) {
+          <div class="summary-item-row">
+            <img
+              [src]="imageUrlFor(item)"
+              alt=""
+              width="56"
+              height="56"
+              loading="lazy"
+              class="summary-item-image"
+              appImgFallback
+            />
+            <div class="summary-item-details">
+              <span class="summary-item-name">{{ item.productName }}</span>
+              <span class="summary-item-qty">{{ item.quantity }} × {{ item.weight || item.unit }}</span>
+            </div>
+            <span class="summary-item-price">₹{{ item.subtotal | number: '1.0-2' }}</span>
+          </div>
+        }
 
-  <div class="payment-content" *ngIf="!isLoading && cartItems.length > 0">
-    <div class="order-summary-section">
-      <h3>Order Summary</h3>
-      <div class="summary-item-row" *ngFor="let item of cartItems">
-        <img [src]="imageUrlFor(item)" [alt]="item.productName" class="summary-item-image" />
-        <div class="summary-item-details">
-          <span class="summary-item-name">{{ item.productName }}</span>
-          <span class="summary-item-qty">{{ item.quantity }} {{ item.unit }}</span>
+        <div class="divider"></div>
+
+        <div class="summary-line">
+          <span>Subtotal ({{ totalCount() }} {{ totalCount() === 1 ? 'item' : 'items' }})</span>
+          <span>₹{{ subtotal() | number: '1.2-2' }}</span>
         </div>
-        <span class="summary-item-price">
-          ₹{{ item.subtotal != null ? item.subtotal : (item.pricePerUnit * item.quantity) }}
-        </span>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="summary-line">
-        <span>Subtotal ({{ totalCount }} items)</span>
-        <span>₹{{ subtotalAmount | number: '1.2-2' }}</span>
-      </div>
-      @if (appliedCoupon && discountAmount > 0) {
-        <div class="summary-line discount-line">
-          <span>Discount ('{{ appliedCoupon.code }}')</span>
-          <span>-₹{{ discountAmount | number: '1.2-2' }}</span>
+        @if (appliedCoupon() && discount() > 0) {
+          <div class="summary-line discount-line">
+            <span>Discount ('{{ appliedCoupon()!.code }}')</span>
+            <span>-₹{{ discount() | number: '1.2-2' }}</span>
+          </div>
+        }
+        <div class="summary-line">
+          <span>Delivery</span>
+          <span class="free-text">FREE</span>
         </div>
-      }
-      <div class="summary-line">
-        <span>Delivery</span>
-        <span class="free-text">FREE</span>
+        <div class="divider"></div>
+        <div class="summary-line total-line">
+          <strong>Total</strong>
+          <strong>₹{{ total() | number: '1.2-2' }}</strong>
+        </div>
       </div>
-      <div class="divider"></div>
-      <div class="summary-line total-line">
-        <strong>Total</strong>
-        <strong>₹{{ totalAmount | number: '1.2-2' }}</strong>
+
+      <div class="payment-method-section">
+        <fieldset class="option-group">
+          <legend>Deliver to</legend>
+
+          @if (addresses().length === 0) {
+            <div class="no-address">
+              <p>You haven't saved a delivery address yet.</p>
+              <a routerLink="/account" [queryParams]="addAddressQuery" class="add-address-link">
+                + Add a delivery address
+              </a>
+            </div>
+          } @else {
+            @for (address of addresses(); track address.id) {
+              <label class="payment-method-option address-option">
+                <input
+                  type="radio"
+                  name="deliveryAddress"
+                  [value]="address.id"
+                  [checked]="selectedAddressId() === address.id"
+                  (change)="selectedAddressId.set(address.id)"
+                />
+                <span class="option-label">
+                  <strong>{{ address.label }}</strong>
+                  @if (address.isDefault) {
+                    <span class="default-pill">Default</span>
+                  }
+                  <span class="address-lines">
+                    {{ address.line1 }}@if (address.line2) {, {{ address.line2 }}}, {{ address.city }}, {{ address.state }} - {{ address.pincode }}
+                  </span>
+                </span>
+              </label>
+            }
+            <a routerLink="/account" [queryParams]="addAddressQuery" class="add-address-link">
+              Add or edit addresses
+            </a>
+          }
+        </fieldset>
+
+        <fieldset class="option-group">
+          <legend>Pay with</legend>
+
+          <label class="payment-method-option">
+            <input type="radio" name="paymentMethod" value="UPI" [checked]="paymentMethod() === 'UPI'" (change)="selectMethod('UPI')" />
+            <span class="option-icon" aria-hidden="true">📱</span>
+            <span class="option-label">UPI</span>
+          </label>
+          <label class="payment-method-option">
+            <input type="radio" name="paymentMethod" value="CARD" [checked]="paymentMethod() === 'CARD'" (change)="selectMethod('CARD')" />
+            <span class="option-icon" aria-hidden="true">💳</span>
+            <span class="option-label">Credit / Debit Card</span>
+          </label>
+          <label class="payment-method-option">
+            <input type="radio" name="paymentMethod" value="COD" [checked]="paymentMethod() === 'COD'" (change)="selectMethod('COD')" />
+            <span class="option-icon" aria-hidden="true">💵</span>
+            <span class="option-label">Cash on Delivery</span>
+          </label>
+
+          @if (paymentMethod() === 'CARD') {
+            @if (savedCards().length) {
+              <div class="saved-cards" role="radiogroup" aria-label="Choose a card">
+                @for (card of savedCards(); track card.id) {
+                  <label class="saved-card">
+                    <input type="radio" name="savedCard" [checked]="selectedCardId() === card.id" (change)="selectCard(card.id)" />
+                    <span>{{ cardLabel(card) }}</span>
+                  </label>
+                }
+                <label class="saved-card">
+                  <input type="radio" name="savedCard" [checked]="selectedCardId() === null" (change)="selectCard(null)" />
+                  <span>Use a different card</span>
+                </label>
+                @if (selectedCardId() !== null) {
+                  <p class="hint">You'll confirm with your card's CVV in the secure payment window.</p>
+                }
+              </div>
+            }
+            @if (selectedCardId() === null) {
+              <label class="save-card-option">
+                <input type="checkbox" [(ngModel)]="saveCard" name="saveCard" />
+                Save this card for faster checkout next time
+              </label>
+            }
+          }
+        </fieldset>
+
+        <button
+          type="button"
+          class="place-order-btn"
+          (click)="placeOrder()"
+          [disabled]="placingOrder() || !selectedAddress()"
+        >
+          @if (placingOrder()) {
+            <span class="pd-spinner" aria-hidden="true"></span> Placing order…
+          } @else {
+            Place Order · ₹{{ total() | number: '1.2-2' }}
+          }
+        </button>
+        @if (!selectedAddress() && addresses().length === 0) {
+          <p class="hint">Add a delivery address to place your order.</p>
+        }
       </div>
     </div>
-
-    <div class="payment-method-section">
-      <h3>Pay with</h3>
-
-      <label class="payment-method-option">
-        <input type="radio" name="paymentMethod" value="UPI" [(ngModel)]="selectedPaymentMethod" />
-        <span class="option-icon">📱</span>
-        <span class="option-label">UPI</span>
-      </label>
-      <label class="payment-method-option">
-        <input type="radio" name="paymentMethod" value="CARD" [(ngModel)]="selectedPaymentMethod" />
-        <span class="option-icon">💳</span>
-        <span class="option-label">Credit / Debit Card</span>
-      </label>
-      <label class="payment-method-option">
-        <input type="radio" name="paymentMethod" value="COD" [(ngModel)]="selectedPaymentMethod" />
-        <span class="option-icon">💵</span>
-        <span class="option-label">Cash on Delivery</span>
-      </label>
-
-      @if (selectedPaymentMethod === 'CARD') {
-        <label class="save-card-option">
-          <input type="checkbox" [(ngModel)]="saveCard" />
-          Save this card for faster checkout next time
-        </label>
-      }
-
-      <button class="place-order-btn" (click)="placeOrder()" [disabled]="isPlacingOrder">
-        {{ isPlacingOrder ? 'Placing order...' : 'Place Order' }}
-      </button>
-    </div>
-  </div>
+  }
 </div>

@@ -1,0 +1,17 @@
+<button
+  type="button"
+  class="heart"
+  [class.heart--saved]="saved()"
+  [class.heart--card]="variant() === 'card'"
+  [attr.aria-pressed]="saved()"
+  [attr.aria-label]="saved() ? 'Remove from wishlist' : 'Save to wishlist'"
+  (click)="toggle($event)"
+>
+  <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <path
+      d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.7 4.5 6.4 4.5c2 0 3.4 1.1 4.2 2.4h2.8c.8-1.3 2.2-2.4 4.2-2.4 3.7 0 5.5 3.9 4 7.3C19.5 16.4 12 21 12 21z"
+      stroke-width="2"
+      stroke-linejoin="round"
+    />
+  </svg>
+</button>

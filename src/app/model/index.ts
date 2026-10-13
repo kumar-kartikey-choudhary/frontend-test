@@ -6,3 +6,4 @@ export * from './auth.model';
 export * from './ui.model';
 export * from './address.model';
 export * from './notification';
+export * from './engagement.model';

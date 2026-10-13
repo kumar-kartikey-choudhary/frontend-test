@@ -14,7 +14,7 @@
 .back-btn {
   background: none;
   border: none;
-  color: #f5a623;
+  color: var(--pd-primary);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -24,7 +24,7 @@
 .payment-header h2 {
   font-size: 22px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--pd-ink);
 }
 
 .loading-state {
@@ -47,8 +47,8 @@
 
 .order-summary-section,
 .payment-method-section {
-  background: #fff;
-  border: 1px solid #eee;
+  background: var(--pd-white);
+  border: 1px solid var(--pd-border);
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -59,7 +59,7 @@
   font-size: 16px;
   font-weight: 700;
   margin-bottom: 16px;
-  color: #1a1a1a;
+  color: var(--pd-ink);
 }
 
 .summary-item-row {
@@ -85,7 +85,7 @@
 .summary-item-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--pd-ink);
 }
 
 .summary-item-qty {
@@ -96,11 +96,11 @@
 .summary-item-price {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--pd-ink);
 }
 
 .divider {
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--pd-border);
   margin: 12px 0;
 }
 
@@ -113,17 +113,17 @@
 }
 
 .discount-line {
-  color: #27ae60;
+  color: var(--pd-success);
 }
 
 .free-text {
-  color: #27ae60;
+  color: var(--pd-success);
   font-weight: 600;
 }
 
 .total-line {
   font-size: 16px;
-  color: #1a1a1a;
+  color: var(--pd-ink);
 }
 
 .payment-method-option {
@@ -131,7 +131,7 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border: 1px solid #eee;
+  border: 1px solid var(--pd-border);
   border-radius: 10px;
   margin-bottom: 10px;
   cursor: pointer;
@@ -153,7 +153,7 @@
 .option-label {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--pd-ink);
 }
 
 .save-card-option {
@@ -168,7 +168,7 @@
 .place-order-btn {
   width: 100%;
   padding: 14px;
-  background: #27ae60;
+  background: var(--pd-success);
   color: white;
   border: none;
   border-radius: 10px;
@@ -179,10 +179,109 @@
 }
 
 .place-order-btn:hover:not(:disabled) {
-  background: #219a52;
+  background: #256640;
 }
 
 .place-order-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+/* ---- address + grouped options ---- */
+.option-group {
+  margin: 0 0 var(--pd-space-6);
+  padding: 0;
+  border: none;
+}
+
+.option-group legend {
+  margin-bottom: var(--pd-space-3);
+  padding: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.address-option .option-label {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.address-lines {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--pd-muted);
+}
+
+.default-pill {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  background: var(--pd-primary-soft);
+  color: var(--pd-primary-dark);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.no-address {
+  padding: var(--pd-space-4);
+  border: 1px dashed var(--pd-border);
+  border-radius: var(--pd-radius);
+}
+
+.no-address p {
+  margin: 0 0 var(--pd-space-2);
+}
+
+.add-address-link {
+  display: inline-block;
+  margin-top: var(--pd-space-2);
+  color: var(--pd-primary-dark);
+  font-weight: 600;
+}
+
+.failure {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.retry-btn {
+  padding: 0.4rem 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.place-order-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: var(--pd-space-2) 0 0;
+  font-size: 0.85rem;
+  color: var(--pd-muted);
+}
+
+.saved-cards {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.saved-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--pd-gray-300);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.saved-card:has(input:checked) {
+  border-color: var(--pd-primary);
+  background: #fff8ec;
 }

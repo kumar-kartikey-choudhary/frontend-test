@@ -11,6 +11,8 @@ export interface UserDto {
   email: string;
   phoneNumber?: string;
   role: string; // 'ROLE_ADMIN' | 'ROLE_CUSTOMER'
+  /** The customer has confirmed this email address through the emailed link. */
+  emailVerified?: boolean;
   createdAt?: string;
 }
 

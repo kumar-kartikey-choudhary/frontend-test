@@ -1,0 +1,57 @@
+<div class="adm-page">
+  <header class="adm-head">
+    <div>
+      <h1 class="adm-title">Send a notification</h1>
+      <p class="adm-sub">Announcements and offers appear in customers' notification bell and their account page.</p>
+    </div>
+  </header>
+
+  <section class="adm-card">
+    <form class="compose adm-form" #composeForm="ngForm" (ngSubmit)="send(composeForm)" novalidate>
+      <fieldset class="audience">
+        <legend class="adm-label">Who is it for?</legend>
+        <label class="adm-check">
+          <input type="radio" name="audience" value="ALL_CUSTOMERS" [(ngModel)]="audience" /> Every customer
+        </label>
+        <label class="adm-check">
+          <input type="radio" name="audience" value="USER" [(ngModel)]="audience" /> One customer
+        </label>
+      </fieldset>
+
+      @if (audience === 'USER') {
+        <div class="adm-field">
+          <label for="n-username">Customer's username</label>
+          <input id="n-username" class="adm-input" name="username" type="text" autocomplete="off" required [(ngModel)]="username" #user="ngModel" />
+          @if (user.invalid && user.touched) { <small class="adm-error" role="alert">Enter the customer's username.</small> }
+        </div>
+      }
+
+      <div class="adm-field">
+        <label for="n-kind">Kind</label>
+        <select id="n-kind" class="adm-select kind" name="kind" [(ngModel)]="kind">
+          @for (k of kinds; track k.value) {
+            <option [value]="k.value">{{ k.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="adm-field">
+        <label for="n-title">Title</label>
+        <input id="n-title" class="adm-input" name="title" type="text" maxlength="150" required [(ngModel)]="title" #ttl="ngModel" placeholder="e.g. Diwali sweets - 20% off this week" />
+        @if (ttl.invalid && ttl.touched) { <small class="adm-error" role="alert">A title is required.</small> }
+      </div>
+
+      <div class="adm-field">
+        <label for="n-message">Message <span class="adm-muted">(optional)</span></label>
+        <textarea id="n-message" class="adm-textarea" name="message" rows="4" maxlength="1000" [(ngModel)]="message"></textarea>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="adm-btn adm-btn--primary" [disabled]="sending()">{{ sending() ? 'Sending…' : 'Send notification' }}</button>
+        @if (lastSent() !== null) {
+          <span class="adm-muted" role="status">Last send reached {{ lastSent() }} {{ lastSent() === 1 ? 'customer' : 'customers' }}.</span>
+        }
+      </div>
+    </form>
+  </section>
+</div>

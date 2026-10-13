@@ -1,0 +1,33 @@
+<article class="card" [class.card--soldout]="soldOut()">
+  <app-wishlist-button class="on-card" [productId]="product().id" />
+  <a class="media" [routerLink]="['/products/item', product().id]" tabindex="-1" aria-hidden="true">
+    <img
+      [src]="imageUrl()"
+      [alt]="''"
+      width="320"
+      height="240"
+      loading="lazy"
+      decoding="async"
+      appImgFallback
+    />
+    @if (tag()) {
+      <span class="tag">{{ tag() }}</span>
+    }
+    @if (soldOut()) {
+      <span class="soldout">Out of stock</span>
+    }
+  </a>
+
+  <div class="body">
+    <h3 class="title">
+      <a [routerLink]="['/products/item', product().id]">{{ product().productName }}</a>
+    </h3>
+    @if (rating(); as r) {
+      <app-star-rating [value]="r.average" [count]="r.count" />
+    }
+    @if (product().description) {
+      <p class="desc">{{ product().description }}</p>
+    }
+    <app-product-purchase [product]="product()" />
+  </div>
+</article>

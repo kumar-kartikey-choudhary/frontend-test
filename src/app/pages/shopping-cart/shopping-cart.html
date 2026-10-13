@@ -1,93 +1,160 @@
 <div class="cart-container">
   <div class="cart-header">
-    <h2>My Cart ({{ totalCount }} items)</h2>
+    <h2>My Cart @if (!loading() && !failed()) { <span>({{ totalCount() }} {{ totalCount() === 1 ? 'item' : 'items' }})</span> }</h2>
+    @if (!loading() && !failed() && items().length > 0) {
+      <button type="button" class="btn-clear-cart" [disabled]="clearing()" (click)="clearCart()">
+        {{ clearing() ? 'Clearing…' : 'Clear cart' }}
+      </button>
+    }
   </div>
 
-  <div class="cart-content" *ngIf="cartItems.length > 0; else emptyCart">
-    <div class="cart-items-section">
-      <div class="cart-item-card" *ngFor="let item of cartItems">
-        <div class="item-image">
-          <img [src]="imageUrlFor(item)" [alt]="item.productName" />
-        </div>
-
-        <div class="item-details">
-          <h3 class="product-name">{{ item.productName }}</h3>
-          <span class="unit-badge" *ngIf="item.weight">{{ item.weight }}</span>
-        </div>
-
-        <div class="quantity-controls">
-          <button class="qty-btn" (click)="decreaseQuantity(item)">-</button>
-          <span class="qty-count">{{ item.quantity }}</span>
-          <button class="qty-btn" (click)="increaseQuantity(item)">+</button>
-        </div>
-
-        <div class="item-pricing">
-          <span class="price-value">₹{{ item.subtotal != null ? item.subtotal : (item.pricePerUnit * item.quantity) }}</span>
-        </div>
-
-        <div class="item-actions">
-          <button class="delete-btn" (click)="removeItem(item.productId)">
-            <i class="fa fa-trash"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="cart-summary-card">
-      <div class="coupon-box">
-        @if (!appliedCoupon) {
-          <div class="coupon-input-row">
-            <input
-              type="text"
-              placeholder="Coupon code"
-              [(ngModel)]="couponCodeInput"
-              (keyup.enter)="applyCoupon()"
-              class="coupon-input"
-            />
-            <button class="btn-apply-coupon" (click)="applyCoupon()" [disabled]="isApplyingCoupon || !couponCodeInput">
-              {{ isApplyingCoupon ? 'Checking...' : 'Apply' }}
-            </button>
-          </div>
-          @if (couponError) {
-            <p class="coupon-error">{{ couponError }}</p>
-          }
-        } @else {
-          <div class="coupon-applied-row">
-            <span class="coupon-applied-label">✓ '{{ appliedCoupon.code }}' applied</span>
-            <button class="btn-remove-coupon" (click)="removeCoupon()">Remove</button>
-          </div>
+  @if (loading()) {
+    <div class="cart-content" aria-busy="true" aria-label="Loading your cart">
+      <div class="cart-items-section">
+        @for (i of skeletons; track i) {
+          <div class="pd-skeleton skeleton-row"></div>
         }
       </div>
-
-      <div class="summary-line">
-        <span>Subtotal ({{ totalCount }} items)</span>
-        <span>₹{{ subtotalAmount | number: '1.2-2' }}</span>
-      </div>
-      @if (discountAmount > 0) {
-        <div class="summary-line discount-line">
-          <span>Discount</span>
-          <span>-₹{{ discountAmount | number: '1.2-2' }}</span>
-        </div>
-      }
-      <div class="summary-line">
-        <span>Delivery</span>
-        <span class="free-text">FREE</span>
-      </div>
-      <div class="divider"></div>
-      <div class="summary-line total-line">
-        <strong>Total</strong>
-        <strong>₹{{ totalAmount | number: '1.2-2' }}</strong>
-      </div>
-
-      <button class="checkout-btn" (click)="proceedToPayment()">
-        Proceed to Payment
-      </button>
+      <div class="pd-skeleton skeleton-summary"></div>
     </div>
-  </div>
+  } @else if (failed()) {
+    <div class="pd-alert pd-alert--error cart-alert" role="alert">
+      <span>We couldn't load your cart.</span>
+      <button type="button" class="retry-btn" (click)="loadCart()">Try again</button>
+    </div>
+  } @else if (items().length > 0) {
+    <div class="cart-content">
+      <div class="cart-items-section">
+        @for (item of items(); track lineId(item); let i = $index) {
+          <div class="cart-item-card" [class.is-busy]="isBusy(item)" [class.is-continued]="i > 0 && items()[i - 1].productId === item.productId">
+            <a class="item-image" [routerLink]="['/products/item', item.productId]" tabindex="-1" aria-hidden="true">
+              <img [src]="imageUrlFor(item)" alt="" width="96" height="96" loading="lazy" appImgFallback />
+            </a>
 
-  <ng-template #emptyCart>
-    <div class="empty-cart-card" *ngIf="!isLoading">
-      <div class="empty-cart-icon">
+            <div class="item-details">
+              <h3 class="product-name">
+                <a [routerLink]="['/products/item', item.productId]">{{ item.productName }}</a>
+              </h3>
+              <div class="item-meta">
+                @if (item.weight) {
+                  <span class="unit-badge">{{ item.weight }}</span>
+                }
+                <span class="unit-price">₹{{ item.pricePerUnit | number: '1.0-2' }} each</span>
+              </div>
+            </div>
+
+            <div class="quantity-controls" role="group" [attr.aria-label]="'Quantity of ' + item.productName + ' (' + item.weight + ')'">
+              <button
+                type="button"
+                class="qty-btn"
+                aria-label="Decrease quantity"
+                [disabled]="isBusy(item)"
+                (click)="decrease(item)"
+              >
+                −
+              </button>
+              <output class="qty-count" aria-live="polite">{{ item.quantity }}</output>
+              <button
+                type="button"
+                class="qty-btn"
+                aria-label="Increase quantity"
+                [disabled]="isBusy(item)"
+                (click)="increase(item)"
+              >
+                +
+              </button>
+            </div>
+
+            <div class="item-pricing">
+              <span class="price-value">₹{{ item.subtotal | number: '1.0-2' }}</span>
+            </div>
+
+            <div class="item-actions">
+              <button
+                type="button"
+                class="delete-btn"
+                [attr.aria-label]="'Remove ' + item.productName + ' (' + item.weight + ') from cart'"
+                [disabled]="isBusy(item)"
+                (click)="remove(item)"
+              >
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        }
+
+        <a routerLink="/products" class="continue-link">← Continue shopping</a>
+      </div>
+
+      <div class="cart-summary-card">
+        <div class="coupon-box">
+          @if (!appliedCoupon()) {
+            <div class="coupon-input-row">
+              <label class="pd-visually-hidden" for="coupon">Coupon code</label>
+              <input
+                id="coupon"
+                type="text"
+                placeholder="Coupon code"
+                autocomplete="off"
+                class="coupon-input"
+                [ngModel]="couponInput()"
+                (ngModelChange)="couponInput.set($event)"
+                (keyup.enter)="applyCoupon()"
+              />
+              <button
+                type="button"
+                class="btn-apply-coupon"
+                (click)="applyCoupon()"
+                [disabled]="applyingCoupon() || !couponInput().trim()"
+              >
+                {{ applyingCoupon() ? 'Checking…' : 'Apply' }}
+              </button>
+            </div>
+            @if (couponError()) {
+              <p class="coupon-error" role="alert">{{ couponError() }}</p>
+            }
+          } @else {
+            <div class="coupon-applied-row">
+              <span class="coupon-applied-label">✓ '{{ appliedCoupon()!.code }}' applied</span>
+              <button type="button" class="btn-remove-coupon" (click)="removeCoupon()">Remove</button>
+            </div>
+            @if (couponHint()) {
+              <p class="coupon-error" role="status">{{ couponHint() }}</p>
+            }
+          }
+        </div>
+
+        <div class="summary-line">
+          <span>Subtotal ({{ totalCount() }} {{ totalCount() === 1 ? 'item' : 'items' }})</span>
+          <span>₹{{ subtotal() | number: '1.2-2' }}</span>
+        </div>
+        @if (discount() > 0) {
+          <div class="summary-line discount-line">
+            <span>Discount</span>
+            <span>-₹{{ discount() | number: '1.2-2' }}</span>
+          </div>
+        }
+        <div class="summary-line">
+          <span>Delivery</span>
+          <span class="free-text">FREE</span>
+        </div>
+        <div class="divider"></div>
+        <div class="summary-line total-line">
+          <strong>Total</strong>
+          <strong>₹{{ total() | number: '1.2-2' }}</strong>
+        </div>
+
+        <button type="button" class="checkout-btn" (click)="proceedToPayment()">Proceed to Payment</button>
+      </div>
+    </div>
+  } @else {
+    <div class="empty-cart-card">
+      <div class="empty-cart-icon" aria-hidden="true">
         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="8" cy="21" r="1"/>
           <circle cx="19" cy="21" r="1"/>
@@ -98,5 +165,5 @@
       <p>Looks like you haven't added any sweets or dairy items to your cart yet.</p>
       <a routerLink="/products" class="shop-now-btn">Explore Products</a>
     </div>
-  </ng-template>
+  }
 </div>
