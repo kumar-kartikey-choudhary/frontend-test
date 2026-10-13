@@ -62,7 +62,12 @@ export class PaymentService {
       const script = document.createElement('script');
       script.src = RAZORPAY_SCRIPT_URL;
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load Razorpay Checkout script'));
+      script.onerror = () => {
+        script.remove();
+        this.scriptLoadPromise = null; // a failed load can be retried instead of failing for the rest of the visit
+        reject(new Error('Failed to load Razorpay Checkout script'));
+      };
+      script.referrerPolicy = 'strict-origin-when-cross-origin';
       document.body.appendChild(script);
     });
 

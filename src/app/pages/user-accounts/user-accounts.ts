@@ -17,6 +17,7 @@ import { PaymentService } from '../../service/payment/payment-service';
 import { UserService } from '../../service/user/user-service';
 import { ToastService } from '../../core/services/toast.service';
 import { ConfirmService } from '../../core/services/confirm.service';
+import { safeReturnUrl } from '../../shared/uti/safe-url.util';
 import type { UserDto } from '../../model';
 import type { AddressDto } from '../../model/address.model';
 import type { NotificationDto } from '../../model/notification';
@@ -36,11 +37,6 @@ const EMPTY_ADDRESS: Partial<AddressDto> = {
   landmark: '',
   isDefault: false,
 };
-
-/** Accept only same-site paths, so a crafted ?returnUrl= can't send people to another website. */
-function safeReturnUrl(value: string | null): string | null {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : null;
-}
 
 @Component({
   selector: 'app-user-account',

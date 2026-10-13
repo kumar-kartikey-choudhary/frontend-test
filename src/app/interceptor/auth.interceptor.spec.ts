@@ -2,7 +2,8 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Router, provideRouter } from '@angular/router';
-import { authInterceptor } from './auth.interceptor';
+import { authInterceptor, isOwnApiRequest } from './auth.interceptor';
+import { environment } from '../../environments/environment';
 import { AuthService } from '../service/login/auth-service';
 
 function fakeJwt(expSecondsFromNow: number): string {
@@ -126,5 +127,41 @@ describe('authInterceptor', () => {
 
     expect(status).toBe(401);
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  describe('where the token goes', () => {
+    it('sends it to our own API', () => {
+      sessionStorage.setItem('AUTH_TOKEN', fakeJwt(3600));
+      setup();
+      http.get(`${environment.apiBaseUrl}/orders/findByCustomer`).subscribe();
+      const req = backend.expectOne(`${environment.apiBaseUrl}/orders/findByCustomer`);
+      expect(req.request.headers.get('Authorization')).toMatch(/^Bearer /);
+      req.flush([]);
+    });
+
+    it('never sends it to another site', () => {
+      sessionStorage.setItem('AUTH_TOKEN', fakeJwt(3600));
+      setup();
+      http.get('https://third-party.example/pixel').subscribe();
+      const req = backend.expectOne('https://third-party.example/pixel');
+      expect(req.request.headers.has('Authorization')).toBeFalse();
+      req.flush({});
+    });
+
+    it('does not sign the user out because some other site said 401', () => {
+      sessionStorage.setItem('AUTH_TOKEN', fakeJwt(3600));
+      sessionStorage.setItem('REFRESH_TOKEN', 'refresh-1');
+      setup();
+      http.get('https://third-party.example/pixel').subscribe({ error: () => {} });
+      backend.expectOne('https://third-party.example/pixel').flush({}, { status: 401, statusText: 'Unauthorized' });
+      backend.expectNone((r) => r.url.endsWith('/users/refresh-token'));
+      expect(router.navigate).not.toHaveBeenCalled();
+    });
+
+    it('treats a look-alike host as another site', () => {
+      expect(isOwnApiRequest(`${environment.apiBaseUrl}.evil.example/x`)).toBeFalse();
+      expect(isOwnApiRequest('https://api.pratikdairy.com@evil.example/x')).toBeFalse();
+      expect(isOwnApiRequest('/orders/1')).toBeTrue();
+    });
   });
 });

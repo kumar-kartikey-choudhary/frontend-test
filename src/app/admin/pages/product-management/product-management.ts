@@ -16,6 +16,8 @@ import type { InventoryLedgerEntry, InventoryReason, Product } from '../../../mo
 const LOW_STOCK_THRESHOLD = 10;
 
 const PAGE_SIZES = [10, 25, 50, 100];
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const STOCK_REASONS: { value: InventoryReason; label: string }[] = [
   { value: 'RESTOCK', label: 'Restock (new stock arrived)' },
@@ -226,8 +228,13 @@ export class ProductManagement implements OnInit {
     const file = (event.target as HTMLInputElement).files?.[0];
     this.clearPendingImage();
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      this.toast.error('Please choose an image file.');
+    // An allow-list rather than "image/*": SVG and other types can carry scripts and are not accepted.
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      this.toast.error('Please choose a JPG, PNG, WebP or GIF picture.');
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      this.toast.error(`That picture is too large. The limit is ${MAX_IMAGE_BYTES / (1024 * 1024)} MB.`);
       return;
     }
     this.pendingImage.set({ file, previewUrl: URL.createObjectURL(file) });

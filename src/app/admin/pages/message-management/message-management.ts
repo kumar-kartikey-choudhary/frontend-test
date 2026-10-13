@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { mailtoHref, telHref } from '../../../shared/uti/safe-url.util';
 import { Pager } from '../../../shared/components/pager/pager';
 import { Paginator } from '../../../shared/uti/paginator';
 import { DatePipe } from '@angular/common';
@@ -70,6 +71,14 @@ export class MessageManagement implements OnInit {
   }
 
   protected replyLink(message: ContactMessageDto): string {
-    return `mailto:${message.email}?subject=${encodeURIComponent('Re: your message to Pratik Dairy & Sweets')}`;
+    return mailtoHref(message.email, 'Re: your message to Pratik Dairy & Sweets');
+  }
+
+  protected callHref(message: ContactMessageDto): string {
+    return telHref(message.phone);
+  }
+
+  protected mailHref(message: ContactMessageDto): string {
+    return mailtoHref(message.email);
   }
 }

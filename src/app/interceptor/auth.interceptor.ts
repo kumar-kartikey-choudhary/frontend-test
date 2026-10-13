@@ -2,9 +2,26 @@ import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment';
 import { AuthService } from '../service/login/auth-service';
 import { StorageService } from '../core/services/storage.service';
 import { ToastService } from '../core/services/toast.service';
+
+/** Scheme + host + port of our own API - the only place the access token is ever sent. */
+const API_ORIGIN = new URL(environment.apiBaseUrl).origin;
+
+/**
+ * True when the request goes to our own API. A relative URL counts (it goes to this site's own server).
+ * Anything else - a third-party host - must never receive the bearer token.
+ */
+export function isOwnApiRequest(url: string): boolean {
+  try {
+    const target = new URL(url, API_ORIGIN);
+    return target.origin === API_ORIGIN;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Attaches the bearer token and handles auth failures.
@@ -27,7 +44,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   let request = req;
 
-  if (storage.isBrowser && !isAuthEndpoint) {
+  if (storage.isBrowser && !isAuthEndpoint && isOwnApiRequest(req.url)) {
     const token = authService.getToken();
     if (token && !authService.isTokenExpired(token)) {
       request = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
@@ -36,6 +53,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(request).pipe(
     catchError((error: HttpErrorResponse) => {
+      // A 401 from some other site says nothing about our session.
+      if (!isOwnApiRequest(req.url)) {
+        return throwError(() => error);
+      }
+
       if (error.status === 401 && !isAuthEndpoint && authService.hasRefreshToken()) {
         return authService.refreshToken().pipe(
           // Only a failed *refresh* ends the session. This sits before the retry so an ordinary error

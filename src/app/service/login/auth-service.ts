@@ -4,6 +4,7 @@ import { Observable, finalize, firstValueFrom, shareReplay, tap } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environment';
 import { StorageService } from '../../core/services/storage.service';
+import { safeReturnUrl } from '../../shared/uti/safe-url.util';
 import type { LoginRequest, JwtResponse, AuthState, RefreshTokenResponse } from '../../model';
 
 export type { LoginRequest, JwtResponse, AuthState };
@@ -77,10 +78,17 @@ export class AuthService {
       this.storage.remove(USERNAME_KEY);
       return;
     }
+    // The role and name come from the token itself when it carries them. The separate storage entries are
+    // easy to edit by hand (changing USER_ROLE to admin would otherwise show the admin screens), while
+    // the token's contents can't be changed without the server rejecting it. The API checks the role on
+    // every request regardless - this only keeps the screens honest.
+    const claims = decodeJwt(token);
+    const roleClaim = claims?.['role'];
+    const subject = claims?.['sub'];
     this._state.set({
       token,
-      username: this.storage.get(USERNAME_KEY) ?? '',
-      role: this.storage.get(USER_ROLE_KEY) ?? '',
+      username: typeof subject === 'string' ? subject : (this.storage.get(USERNAME_KEY) ?? ''),
+      role: typeof roleClaim === 'string' ? roleClaim : (this.storage.get(USER_ROLE_KEY) ?? ''),
     });
   }
 
@@ -221,8 +229,10 @@ export class AuthService {
    * role-appropriate landing page.
    */
   navigateAfterLogin(returnUrl?: string | null): void {
-    if (returnUrl && returnUrl !== '/login' && returnUrl !== '/signup') {
-      this.router.navigateByUrl(returnUrl);
+    // returnUrl comes from the address bar, so only a same-site path is trusted.
+    const target = safeReturnUrl(returnUrl);
+    if (target) {
+      this.router.navigateByUrl(target);
       return;
     }
     this.router.navigate([this.admin() ? '/admin/dashboard' : '/home']);

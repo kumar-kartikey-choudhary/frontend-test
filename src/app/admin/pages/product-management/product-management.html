@@ -219,7 +219,7 @@
 
           <div class="adm-field">
             <label for="f-image">Add a photo</label>
-            <input class="adm-input" id="f-image" type="file" (change)="onFileSelected($event)" name="productImageFile" accept="image/*" class="file-input-custom" />
+            <input class="adm-input" id="f-image" type="file" (change)="onFileSelected($event)" name="productImageFile" accept="image/jpeg,image/png,image/webp,image/gif" class="file-input-custom" />
             <p class="adm-hint">
               Uploaded once the product is saved. A product can carry several photos - choosing another
               file adds it rather than replacing the first.

@@ -33,8 +33,8 @@
           <li class="message" [class.message--done]="m.handled">
             <div class="top">
               <strong>{{ m.name }}</strong>
-              <a class="adm-link" [href]="'mailto:' + m.email">{{ m.email }}</a>
-              @if (m.phone) { <a class="adm-link" [href]="'tel:' + m.phone">{{ m.phone }}</a> }
+              <a class="adm-link" [href]="mailHref(m)">{{ m.email }}</a>
+              @if (m.phone) { <a class="adm-link" [href]="callHref(m)">{{ m.phone }}</a> }
               <time class="adm-muted">{{ m.createdAt | date: 'medium' }}</time>
               @if (m.handled) { <span class="adm-badge adm-badge--success">handled</span> }
             </div>

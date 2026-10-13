@@ -87,6 +87,19 @@ describe('AuthService - restoring a session on reload', () => {
   beforeEach(() => sessionStorage.clear());
   afterEach(() => sessionStorage.clear());
 
+  it('takes the role from the token, not from an entry anyone can edit in the browser', () => {
+    const payload = btoa(JSON.stringify({ sub: 'asha', role: 'ROLE_CUSTOMER', exp: Math.floor(Date.now() / 1000) + 3600 }));
+    sessionStorage.setItem('AUTH_TOKEN', `header.${payload}.signature`);
+    sessionStorage.setItem('USER_ROLE', 'ROLE_ADMIN'); // tampered
+    sessionStorage.setItem('USERNAME', 'someone-else'); // tampered
+
+    const auth = createService();
+
+    expect(auth.admin()).toBeFalse();
+    expect(auth.getUserRole()).toBe('ROLE_CUSTOMER');
+    expect(auth.username()).toBe('asha');
+  });
+
   it('uses the refresh token to restore the session when the access token expired while the tab was closed', async () => {
     sessionStorage.setItem('AUTH_TOKEN', fakeJwt(-60));
     sessionStorage.setItem('REFRESH_TOKEN', 'refresh-1');
